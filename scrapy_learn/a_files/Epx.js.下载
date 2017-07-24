@@ -1,0 +1,2539 @@
+Epx = {};
+Epx.selectInfoArray = [];
+Epx.get = function(arg) {
+	var component = Ext.getCmp(arg);
+	var element = Ext.get(arg);
+	if (component) {
+		return component;
+	} else if (element) {
+		return element;
+	} else {
+		return null;
+	}
+},
+/**
+ * 初始化必填字段
+ */
+Epx.initRequiredFields = function() {
+	var list = Ext.query("[class~='required']");
+	for(var i = 0 ; i < list.length ; i ++){
+		var parent = Ext.get(list[i]).findParent('td', 3);
+		if (!parent) {
+			return;
+		}
+		var thEl = Ext.get(parent).prev('th', 2);
+		if (!thEl) {
+			return;
+		}
+		var innerHTML = Ext.getDom(thEl).innerHTML;
+		Ext.get(thEl).update(innerHTML+'<font color=red>*</font>');
+	}
+},
+/**
+ * 装饰下拉
+ */
+Epx.declareCombo = function(info) {
+	var autoFilledFields = Ext.query("[autoFill^='@" + info.id + ".']");
+	var object = {
+			id : info.id,
+			hiddenId : info.hiddenInputId,
+			dataBaseUrl : info.dataBaseUrl,
+			cssClass : info.cssClass,
+			forceSelection : info.forceSelection,
+			hideTrigger : info.hideTrigger,
+			pageSize : info.pageSize,
+			readOnly : !info.readonly ? false : info.readonly,
+			applyTo : info.inputId,
+			isMultiSelect : info.multi == 'true' ? true : false
+	};
+	if(info.forceSelection){
+		object.hiddenName = info.hiddenInputName;
+	}
+	var combo = new Epx.ComboBox(object);
+	combo.el.removeClass(info.cssClass);
+	combo.store.autoFilledFields = autoFilledFields;
+	combo.on('select', info.onChange);
+	var record = new Ext.data.Record({
+		code : info.value,
+		value : info.rawValue
+	});
+	combo.store.insert(0, record);
+	combo.setValue(info.value);
+	var valuearray = info.value.split(combo.valueSeparator);
+	var displayarray = info.rawValue.split(combo.displaySeparator);
+	for(var i = 0 ; i < valuearray.length && info.value != '' ; i ++){
+		var record = new combo.store2RecordFormat({code : valuearray[i] , value : displayarray[i]});
+		combo.store2.insert(combo.store2.getCount() , record);
+	}
+	if (info.pageSize != 0) {
+		combo.listWidth = 470;
+	}
+	combo.store.on('beforeload', function(store, options) {
+		options.params['fullEntity'] = store.autoFilledFields.length > 0 ? true : false;
+		options.params['selectedItems'] = combo.getValue();
+	});
+	if (info.parameters.length != 0) {
+		combo.on('beforequery', function() {
+			delete this.lastQuery;
+		});
+		var links = {};
+		for ( var j = 0; j < info.parameters.length; j++) {
+			var name = info.parameters[j].name;
+			var value = info.parameters[j].value;
+			if (value.indexOf('@') == 0) {
+				var componentId = value.substring(1, value.length);
+				if (Ext.getCmp(componentId)) {
+					links[name] = Ext.getCmp(componentId);
+					if (!links[name].linkComponents) {
+						links[name].linkComponents = [];
+					}
+					links[name].linkComponents.push(combo);
+					Ext.getCmp(componentId).on('select', function() {
+							if (this.linkComponents) {
+								for ( var i = 0; i < this.linkComponents.length; i++) {
+								this.linkComponents[i].clearValue();
+							}
+						}
+					});
+				} else if(Ext.get(componentId)){
+					links[name] = Ext.get(componentId);
+					if (!links[name].linkComponents) {
+						links[name].linkComponents = [];
+					}
+					links[name].linkComponents.push(combo);
+					Ext.get(componentId).on('change', function() {
+						if (this.linkComponents) {
+							for ( var i = 0; i < this.linkComponents.length; i++) {
+								this.linkComponents[i].clearValue();
+							}
+						}
+					});
+				}
+			} else {
+				links[name] = value;
+			}
+		}
+		combo.store.links = links;
+		combo.store.on('beforeload', function(store, options) {
+			for ( var name in this.links) {
+				if (this.links[name]) {
+					if (typeof (this.links[name]) == "string") {
+						options.params[name] = this.links[name];
+					} else {
+						options.params[name] = this.links[name].getValue();
+					}
+				}
+			}
+		});
+	}
+},
+Epx.declareCombos = function() {
+	for ( var i = 0; i < Epx.selectInfoArray.length; i++) {
+		var info = Epx.selectInfoArray[i];
+		Epx.declareCombo(info);
+	}
+},
+/**
+ * 初始化fragment
+ */
+Epx.initFragment = function() {
+	Epx.initRequiredFields();
+	Ext.callback(Epx.declareCombos, this, [], 50);
+},
+
+/**
+ * 月份控件
+ */
+Epx.ComboBox = Ext.extend(Ext.form.ComboBox, {
+	store2RecordFormat : Ext.data.Record.create([
+	    {name: 'id', mapping: 'code'},
+		{name: 'code', mapping: 'code'},
+		{name: 'value', mapping: 'value'}
+	]),
+	isMultiSelect : false,
+	hiddenId : '',
+	cssClass : '',
+	displayField : 'value',
+	dataBaseUrl : '',
+	minChars : 0,
+	valueField : 'code',
+	mode : 'remote',
+	triggerAction : 'all',
+	typeAhead : false,
+	loadingText : '正在获取数据...',
+	resizable : true,
+	editable : true,
+	displaySeparator : ' ',
+	valueSeparator : ' ',
+	initComponent : function() {
+		if(this.isMultiSelect){
+			this.listWidth = 430;
+			this.triggerClass = 'x-form-search-trigger';
+		}
+		this.store = new Ext.data.Store({
+			isMultiSelect : this.isMultiSelect,
+			autoFilledFields : [],
+			proxy : new Ext.data.HttpProxy({
+				url : this.dataBaseUrl
+			}),
+			reader : new Ext.data.JsonReader({
+				root : 'options',
+				totalProperty : 'recordCount',
+				idProperty : 'code'
+			}, [{
+				name : 'id',
+				mapping : 'code'
+			},{
+				name : 'code',
+				mapping : 'code'
+			}, {
+				name : 'value',
+				mapping : 'value'
+			}, {
+				name : 'entity',
+				mapping : 'entity'
+			}]),
+			listeners : {
+				'load' : function() {
+					if(!this.isMultiSelect){
+						this.insert(0, new Ext.data.Record({
+							code : '',
+							value : '请选择...'
+						}));
+					}
+				}
+			}
+		});
+		this.store2 = new Ext.data.Store({
+			reader : new Ext.data.JsonReader({
+				root : 'options',
+				totalProperty : 'recordCount',
+				idProperty : 'code'
+			}, [{
+				name : 'code',
+				mapping : 'code'
+			}, {
+				name : 'value',
+				mapping : 'value'
+			}])
+		});
+		Epx.ComboBox.superclass.initComponent.call(this);
+	},
+	
+	updateSelectedValues : function(){
+		var value = ''; 
+        var hiddenValue = '';
+        for(var i = 0 ; i < this.store2.data.length ; i++){
+        	var r = this.store2.getAt(i);   
+        	value += r.data[this.displayField] + this.displaySeparator;
+        	hiddenValue += r.data[this.valueField] + this.valueSeparator;
+        }
+        
+        if(hiddenValue.length > 1){
+        	hiddenValue = hiddenValue.substring(0 , hiddenValue.length - this.valueSeparator.length);
+        }
+        if(value.length>1){
+        	value = value.substring(0 , value.length - this.displaySeparator.length);
+        }
+        this.setValue(value);
+        if(this.hiddenField){
+        	this.hiddenField.value = hiddenValue;
+        }
+	},
+	
+	// private
+    onSelect : function(record, index){
+		if(this.fireEvent('beforeselect', this, record, index) !== false){
+        	if(this.isMultiSelect){
+	            var r = this.store.getAt(index);
+	            var newValue = r.data[this.valueField];
+	            if(r.get('selected')){
+	            	r.set('selected' , false);
+	            	var number = this.store2.findBy(function(record , id){
+	            		if(record.get('code') == r.get('code')){
+	            			return true;
+	            		}else{
+	            			return false;
+	            		}
+	            	});
+	            	this.store2.removeAt(number);
+	            }else{
+	            	r.set('selected' , true);
+	            	var record = new this.store2RecordFormat({code : r.get('code') , value : r.get('value')});
+	            	this.store2.insert(this.store2.getCount() , record);
+	            }
+	            this.viewRefresh();
+	            this.updateSelectedValues();
+            }else{
+            	this.setValue(record.data[this.valueField || this.displayField]);
+                this.collapse();
+            }
+            this.fireEvent('select', this, record, index);
+        }
+    },
+    
+    getValue : function(){
+    	if(this.hiddenField){
+			return this.hiddenField.value;
+		}
+        if(this.valueField){
+            return typeof this.value != 'undefined' ? this.value : '';
+        }else{
+            return Ext.form.ComboBox.superclass.getValue.call(this);
+        }
+    },
+    
+    initSelectedItems : function(){
+    	for(var i = 0 ; i < this.store.getCount(); i ++){
+    		var r = this.store.getAt(i);
+    		var number = this.store2.findBy(function(record , id){
+        		if(record.get('code') == r.get('code')){
+        			return true;
+        		}else{
+        			return false;
+        		}
+        	});
+    		if(number != -1){
+    			r.set('selected' , true);
+    		}else{
+    			r.set('selected' , false);
+    		}
+    	}
+    },
+    
+    restrictHeight : function(){
+    	Epx.ComboBox.superclass.restrictHeight.call(this);
+    	if(this.isMultiSelect){
+	    	this.innerList.setHeight(this.innerList.getHeight() + 20);
+	    	this.list.setHeight(this.list.getHeight() + 20);
+    	}
+    },
+    
+    // private
+    onLoad : function(){
+    	if(this.isMultiSelect){
+	    	if(this.getValue() == ''){
+	    		this.store2.removeAll();
+	    	}
+	    	this.initSelectedItems();
+    	}
+    	if(!this.hasFocus){
+            return;
+        }
+        if(this.store.getCount() > 0){
+            this.expand();
+            this.restrictHeight();
+            if(this.lastQuery == this.allQuery){
+                if(this.editable){
+                    this.el.dom.select();
+                }
+                if(!this.selectByValue(this.value, true)){
+                    this.select(0, true);
+                }
+            }else{
+                this.selectNext();
+                if(this.typeAhead && this.lastKey != Ext.EventObject.BACKSPACE && this.lastKey != Ext.EventObject.DELETE){
+                    this.taTask.delay(this.typeAheadDelay);
+                }
+            }
+        }else{
+            this.onEmptyResults();
+        }
+        var cls = 'x-combo-list';
+        var child = this.list.child('.x-combo-list-selected');
+        if(!child){
+        	if(this.isMultiSelect){
+            	var msgBox = Ext.Msg.alert("友情提示","没有找到该条件的相关数据！");   
+            	(function(){   
+            	    msgBox.hide();   
+            	}).defer(1000);
+        		}
+        	}
+    	if(child){
+    		this.tpl2 = '<tpl for="."><div style="float:left"><table><tr><td><span class="' + cls + '-item x-tool x-tool-close" style="width:11px;height:11px"></span></td><td><span>{' + this.displayField + '}</span></td></tr></table></div></tpl>';
+        	var template2 = new Ext.XTemplate(this.tpl2);
+        	template2.compile();
+        	this.view2 = new Ext.DataView({
+                applyTo: child,
+                tpl: template2,
+                singleSelect: true,
+                selectedClass: this.selectedClass,
+                itemSelector: 'x-combo-list-selected-item',
+                bindStore : function(store, initial){
+	                if(!initial && this.store){
+	                    this.store.un("beforeload", this.onBeforeLoad, this);
+	                    this.store.un("datachanged", this.refresh, this);
+	                    this.store.un("add", this.onAdd, this);
+	                    this.store.un("remove", this.refresh, this);
+	                    this.store.un("update", this.refresh, this);
+	                    this.store.un("clear", this.refresh, this);
+	                    if(store !== this.store && this.store.autoDestroy){
+	                        this.store.destroy();
+	                    }
+	                }
+	                if(store){
+	                    store = Ext.StoreMgr.lookup(store);
+	                    store.on("beforeload", this.onBeforeLoad, this);
+	                    store.on("datachanged", this.refresh, this);
+	                    store.on("add", this.onAdd, this);
+	                    store.on("remove", this.refresh, this);
+	                    store.on("update", this.refresh, this);
+	                    store.on("clear", this.refresh, this);
+	                }
+	                this.store = store;
+	                if(store){
+	                    this.refresh();
+	                }
+	            }
+	        });
+        	this.view2.bindStore(this.store2);
+        	this.viewRefresh();
+            
+        }
+        
+        //this.el.focus();
+    },
+    
+    viewRefresh : function(){
+    	this.view.all.fill(Ext.query(this.view.itemSelector, this.view.getTemplateTarget().dom));
+    	this.view.updateIndexes();
+    },
+ // private
+    onViewClick : function(e){
+    	var index = this.view.getSelectedIndexes()[0];
+    	if(index >= this.store.getCount()){//如果index > store的记录，那么必然是多选
+    		var r = this.store2.getAt(index - this.store.getCount());
+        	var number = this.view.store.findBy(function(record , id){
+        		if(record.get('code') == r.get('code')){
+        			return true;
+        		}
+        		return false;
+        	});
+    		index = number;
+        }
+    	var r = this.store.getAt(index);
+        if(r){
+            this.onSelect(r, index);
+        }else{//翻页且多选的情况
+        	this.store2.removeAt(this.view.getSelectedIndexes()[0] - this.store.getCount());
+        	this.updateSelectedValues();
+        	this.viewRefresh();
+        }
+        if(e !== false){
+            this.el.focus();
+        }
+    },
+    
+    initList : function(){
+        if(!this.list){
+        	var cls = 'x-combo-list';
+
+            this.list = new Ext.Layer({
+                shadow: this.shadow, cls: [cls, this.listClass].join(' '), constrain:false
+            });
+
+            var lw = this.listWidth || Math.max(this.wrap.getWidth(), this.minListWidth);
+            this.list.setWidth(lw);
+            this.list.swallowEvent('mousewheel');
+            this.assetHeight = 0;
+
+            if(this.title){
+                this.header = this.list.createChild({cls:cls+'-hd', html: this.title});
+                this.assetHeight += this.header.getHeight();
+            }
+
+            this.innerList = this.list.createChild({cls:cls+'-inner'});
+            this.innerList.on('mouseover', this.onViewOver, this);
+            this.innerList.on('mousemove', this.onViewMove, this);
+            this.innerList.setWidth(lw - this.list.getFrameWidth('lr'));
+
+            if(this.pageSize){
+                this.footer = this.list.createChild({cls:cls+'-ft'});
+                this.pageTb = new Ext.PagingToolbar({
+                    store:this.store,
+                    pageSize: this.pageSize,
+                    renderTo:this.footer
+                });
+                this.assetHeight += this.footer.getHeight();
+            }
+            
+    		
+            if(!this.tpl){
+                this.tpl = '<tpl for="."><div class="' + cls + '-item">{' + this.displayField + '}</div></tpl>';
+                if(this.isMultiSelect){
+                	this.tpl = '<table style="width:100%"><tr><td style="width:60%"><tpl for="."><div class="' + cls + '-item"><span class="check_{selected}" id="checkBox_' + this.id + '_{' + this.valueField + '}" width="20">&nbsp;&nbsp;&nbsp;&nbsp;</span>{' + this.displayField + '}</div>'+ 
+                   '</tpl></td><td style="border-left:solid 1px #DFE8F6;margin:2px 0px 0px 5px;"><div style="font-weight:bold;">已选择:</div>' + 
+                	'<div class="x-combo-list-selected"></div></td>' + '</tr></table>';
+                }
+            }
+            
+            var template = new Ext.XTemplate(this.tpl , {
+	            	isSelected : function(selected){
+	        			return selected;
+	        		},
+	        		store : this.store
+	        		
+	        });
+            template.compile();
+            this.view = new Ext.DataView({
+                applyTo: this.innerList,
+                tpl: template,
+                // private
+                doSingleSelection : function(item, index, e){
+            		if(e.ctrlKey && this.isSelected(index)){
+                        this.deselect(index);
+                    }else{
+                        this.select(index, false);
+                    }
+                },
+                select : function(nodeInfo, keepExisting, suppressEvent){
+                	if(Ext.isArray(nodeInfo)){
+                        if(!keepExisting){
+                            this.clearSelections(true);
+                        }
+                        for(var i = 0, len = nodeInfo.length; i < len; i++){
+                            this.select(nodeInfo[i], true, true);
+                        }
+                        if(!suppressEvent){
+                            this.fireEvent("selectionchange", this, this.selected.elements);
+                        }
+                    } else{
+                        var node = this.getNode(nodeInfo);
+                        if(!keepExisting){
+                            this.clearSelections(true);
+                        }
+                        if(node && !this.isSelected(node)){
+                            if(this.fireEvent("beforeselect", this, node, this.selected.elements) !== false){
+                                Ext.fly(node).addClass(this.selectedClass);
+                                this.selected.add(node);
+                                this.last = node.viewIndex;
+                                if(!suppressEvent){
+                                    this.fireEvent("selectionchange", this, this.selected.elements);
+                                }
+                            }
+                        }
+                    }
+                },
+                singleSelect: true,
+                selectedClass: this.selectedClass,
+                itemSelector: this.itemSelector || '.' + cls + '-item'
+                
+            });
+       
+            this.view.on('click', this.onViewClick, this);
+
+            this.bindStore(this.store, true);
+
+            if(this.resizable){
+                this.resizer = new Ext.Resizable(this.list,  {
+                   pinned:true, handles:'se'
+                });
+                this.resizer.on('resize', function(r, w, h){
+                    this.maxHeight = h-this.handleHeight-this.list.getFrameWidth('tb')-this.assetHeight;
+                    this.listWidth = w;
+                    this.innerList.setWidth(w - this.list.getFrameWidth('lr'));
+                    this.restrictHeight();
+                }, this);
+                this[this.pageSize?'footer':'innerList'].setStyle('margin-bottom', this.handleHeight+'px');
+            }
+        }
+    },
+ 
+    
+	onRender : function(ct, position) {
+		Epx.ComboBox.superclass.onRender.call(this, ct, position);
+		if(Ext.get(this.hiddenId)){
+			Ext.get(this.hiddenId).addClass(this.cssClass);
+			Ext.get(this.hiddenId).dom.setAttribute('elId', this.el.dom.id);
+		}
+		this.on('select' , function(field, record, index) {
+			if (field.getRawValue() == '请选择...') {
+				field.setRawValue('');
+			}
+			
+			for ( var i = 0; i < field.store.autoFilledFields.length; i++) {
+				if (field.getRawValue() == '') {
+					if(Ext.get(field.store.autoFilledFields[i]).dom.tagName == 'INPUT'){
+						Ext.get(field.store.autoFilledFields[i]).dom.value = '';
+					}else{
+						Ext.get(field.store.autoFilledFields[i]).dom.innerHTML = '';
+					}
+				} else {
+					var nameSplit = Ext.get(field.store.autoFilledFields[i]).getAttributeNS('', 'autoFill')
+							.split('.');
+					var value = record.get('entity')[nameSplit[1]];
+					if(value == null){
+						value = '';
+					}else{
+						if (nameSplit.length > 2) {
+							for ( var j = 2; j < nameSplit.length; j++) {
+								value = value[nameSplit[j]];
+							}
+						}
+					}
+					if(Ext.get(field.store.autoFilledFields[i]).dom.tagName == 'INPUT'){
+						Ext.get(field.store.autoFilledFields[i]).dom.value = value;
+					}else{
+						Ext.get(field.store.autoFilledFields[i]).dom.innerHTML = value;
+					}
+				}
+			}
+		});
+		this.on('clear' , function(field) {
+			for ( var i = 0; i < field.store.autoFilledFields.length; i++) {
+				if(Ext.get(field.store.autoFilledFields[i]).dom.tagName == 'INPUT'){
+					Ext.get(field.store.autoFilledFields[i]).dom.value = '';
+				}else{
+					Ext.get(field.store.autoFilledFields[i]).dom.innerHTML = '';
+				}
+			}
+		});
+
+	},
+	
+	clearValue : function() {
+		if (this.hiddenField) {
+			this.hiddenField.value = '';
+		}
+		this.setRawValue('');
+		this.lastSelectionText = '';
+		this.applyEmptyText();
+		this.value = '';
+		this.fireEvent('clear', this);
+	}
+
+});
+/**
+ * 月份控件
+ */
+Epx.MonthField = Ext.extend(Ext.BoxComponent, {
+	// private
+	readOnly : false,
+	range : 50,
+	cssClass : '',
+	initComponent : function() {
+		Epx.MonthField.superclass.initComponent.call(this);
+	},
+
+	onRender : function(ct, position) {
+		if (!this.el) {
+			this.el = Ext.DomHelper.append(Ext.getBody(), {
+				tag : 'input',
+				type : 'hidden',
+				name : this.name || this.id
+			}, true);
+			this.el = Ext.get(this.el);
+		}
+		this.el.setHeight(0);
+		this.el.setWidth(0);
+		this.el.setVisible(false);
+		this.el.hide();
+		var elwrap = this.el.wrap();
+		this.el.addClass(this.cssClass);
+		this.el.dom.setAttribute('elId', 'left_input_' + this.id);
+		this.originalValue = this.originalValue || this.el.dom.value || new Date();
+		Epx.MonthField.superclass.onRender.call(this, ct, position);
+
+		if (!this.wrap) {
+			this.wrap = elwrap.wrap();
+			this.wrap.setStyle('float', 'left');
+		}
+		Ext.DomHelper.append(this.wrap, {
+			tag : 'div',
+			style : {
+				width : '150px',
+				cellspacing : '0'
+			},
+			children : [ {
+				tag : 'div',
+				style : {
+					width : '80px',
+					float : 'left'
+				},
+				id : 'left_' + this.id
+			},{
+				tag : 'div',
+				style : {
+					width : '70px',
+					float : 'left'
+				},
+				id : 'right_' + this.id
+			} ]
+
+		});
+		if (!this.yearItem) {
+			this.createYearItem();
+		}
+		if (!this.monthItem) {
+			this.createMonthItem();
+		}
+		if (this.originalValue) {
+			this.setValue(this.originalValue);
+		}
+		this.setReadOnly(this.readOnly);
+
+	},
+
+	updateHidden : function() {
+		if (this.yearItem.getValue() == '' || this.monthItem.getValue() == '') {
+			Ext.getDom(this.el).value = '';
+			return;
+		}
+		Ext.getDom(this.el).value = this.yearItem.getValue() + '-'
+				+ (this.monthItem.getValue() < 10 ? '0' + this.monthItem.getValue() : this.monthItem.getValue())
+				+ '-01';
+
+	},
+
+	setValue : function(date) {
+		var dt = Date.parseDate(date, "Y-m-d");
+		this.yearItem.setValue(dt.format('Y'));
+		this.monthItem.setValue(parseInt(dt.format('m') , 10));
+		this.updateHidden();
+	},
+
+	getValue : function() {
+		return Ext.getDom(this.el).value;
+	},
+
+	createYearItem : function() {
+		this.yearInput = this.wrap.child('#left_' + this.id).createChild( {
+			tag : 'input',
+			id : 'left_input_' + this.id
+		});
+		this.yearItem = new Epx.YearField( {
+			applyTo : this.yearInput,
+			typeAhead : false,
+			range : this.range,
+			width : 80,
+			listeners : {
+				select : this.updateHidden.createDelegate(this),
+				change : this.updateHidden.createDelegate(this)
+			}
+		});
+
+	},
+
+	createMonthItem : function() {
+		this.monthInput = this.wrap.child('#right_' + this.id).createChild( {
+			tag : 'input',
+			id : 'right_input_' + this.id
+		});
+		this.monthItem = new Epx.NumberField( {
+			applyTo : this.monthInput,
+			typeAhead : false,
+			suffix : '月',
+			beginNum : 1,
+			endNum : 13,
+			width : 70,
+			listeners : {
+				select : this.updateHidden.createDelegate(this),
+				change : this.updateHidden.createDelegate(this)
+			}
+		});
+	},
+
+	setReadOnly : function(readOnly) {
+		this.yearItem.setDisabled(readOnly);
+		this.monthItem.setDisabled(readOnly);
+	}
+
+});
+Ext.reg('Epx.MonthField', Epx.MonthField);
+Epx.NumberField = Ext.extend(Ext.form.ComboBox, {
+	// private
+	isMultiSelect : false,
+	resizable : true,
+	beginNum : 0,
+	endNum : 50,
+	suffix : '',
+	prefix : '',
+	direction : 'asc',
+	triggerAction : 'all',
+	readOnly : false,
+	displaySeparator : ' ',
+	valueSeparator : ' ',
+	initComponent : function() {
+		if(this.isMultiSelect){
+			this.listWidth = 400;
+			this.triggerClass = 'x-form-search-trigger';
+		}
+		this.displayField = 'value';
+		this.typeAhead = false;
+		this.emptyText = '';
+		this.mode = 'local';
+		this.forceAll = true;
+		this.valueField = 'code';
+		this.forceSelection = true;
+		this.hiddenName = this.hiddenName || this.name || this.id;
+		this.hiddenId = this.hiddenName;
+		var data = this.createSelectItem();
+		this.store = new Ext.data.SimpleStore( {
+			fields : [ 'code', 'value' , 'visible' , 'selected' ],
+			data : data
+		});
+		
+		Epx.NumberField.superclass.initComponent.call(this);
+		
+		
+	},
+	
+	onRender : function(ct, position) {
+		Epx.NumberField.superclass.onRender.call(this, ct, position);
+		if(Ext.get(this.id)){
+			Ext.get(this.id).addClass(this.cssClass);
+			Ext.get(this.id).dom.setAttribute('elId', this.el.dom.id);
+		}
+		this.el.removeClass(this.cssClass);
+		this.on('select' , function(field){
+			if (field.getRawValue() == '请选择...') {
+				field.setRawValue('');
+		}});
+	},
+	
+	// private
+    initValue : function(){
+        Ext.form.ComboBox.superclass.initValue.call(this);
+        if(this.hiddenField){
+            this.hiddenField.value =
+                this.hiddenValue !== undefined ? this.hiddenValue :
+                this.value !== undefined ? this.value : '';
+        }
+        if(this.getValue() != ''){
+			var v = '';
+			var array = this.getValue().split(this.valueSeparator);
+			for(var i = 0 ; i < array.length ; i ++){
+				var number = this.store.findBy(function(record , id){
+								if(record.get('code') == array[i]){
+									return true;
+								}
+								return false;
+							});
+				if(number != -1){
+					v += this.store.getAt(number).get(this.displayField) + this.displaySeparator;
+				}
+			}
+			v = v.substring(0 , v.length - 1);
+			this.setRawValue(v);
+		}
+	},
+    
+	initStoreData : function(){
+		var array = this.getValue().split(this.valueSeparator);
+		for(var i = 0 ; i < array.length ; i ++){
+			var number = this.store.findBy(function(record , id){
+							if(record.get('code') == array[i]){
+								return true;
+							}
+							return false;
+						});
+			if(number != -1){
+				this.store.getAt(number).set('selected' , true);
+			}
+		}
+	},
+	initList : function() {
+		if(!this.list){
+			this.initStoreData();
+            var cls = 'x-combo-list';
+
+            this.list = new Ext.Layer({
+                shadow: this.shadow, cls: [cls, this.listClass].join(' '), constrain:false
+            });
+
+            var lw = this.listWidth || Math.max(this.wrap.getWidth(), this.minListWidth);
+            this.list.setWidth(lw);
+            this.list.swallowEvent('mousewheel');
+            this.assetHeight = 0;
+
+            if(this.title){
+                this.header = this.list.createChild({cls:cls+'-hd', html: this.title});
+                this.assetHeight += this.header.getHeight();
+            }
+
+            this.innerList = this.list.createChild({cls:cls+'-inner'});
+            this.innerList.on('mouseover', this.onViewOver, this);
+            this.innerList.on('mousemove', this.onViewMove, this);
+            this.innerList.setWidth(lw - this.list.getFrameWidth('lr'));
+
+            if(this.pageSize){
+                this.footer = this.list.createChild({cls:cls+'-ft'});
+                this.pageTb = new Ext.PagingToolbar({
+                    store:this.store,
+                    pageSize: this.pageSize,
+                    renderTo:this.footer
+                });
+                this.assetHeight += this.footer.getHeight();
+            }
+
+            if(!this.tpl){
+            	this.tpl = '<tpl for="."><tpl if="this.isVisible(values[\'visible\'])"><div class="' + cls + '-item">{' + this.displayField + '}</div></tpl>' 
+                + '<tpl if="!this.isVisible(values[\'visible\'])"><div class="' + cls + '-item">{' + this.displayField + '}</div></tpl>' + '</tpl>';
+                if(this.isMultiSelect){
+                	this.tpl = '<table style="width:100%"><tr><td style="width:60%"><tpl for="."><tpl if="this.isVisible(values[\'visible\'])"><div class="' + cls + '-item"><span class="check_{selected}" id="checkBox_' + this.id + '_{' + this.valueField + '}" width="20">&nbsp;&nbsp;&nbsp;&nbsp;</span>{' + this.displayField + '}</div></tpl>'+ 
+                	'<tpl if="!this.isVisible(values[\'visible\'])"><div class="' + cls + '-item" style="display:none"><span class="check_{selected}" id="checkBox_' + this.id + '_{' + this.valueField + '}" width="20">&nbsp;&nbsp;&nbsp;&nbsp;</span>{' + this.displayField + '}</div></tpl>'+ '</tpl></td><td style="border-left:solid 1px #DFE8F6;margin:2px 0px 0px 5px;"><div style="font-weight:bold;">已选择:</div>' + 
+                	'<tpl for="."><div class="selected_{selected}">{' + this.displayField + '}<span class="' + cls + '-item x-tool x-tool-close" style="width:11px;height:11px"></span></div>'  + '</tpl></td>' + '</tr></table>';
+                }
+            }
+            var template = new Ext.XTemplate(this.tpl , {
+	            	isVisible : function(visible){
+		        		return visible;
+	        		},
+	        		isSelected : function(selected){
+	        			return selected;
+	        		},
+	        		store : this.store
+	        		
+	        });
+            template.compile();
+            this.view = new Ext.DataView({
+                applyTo: this.innerList,
+                tpl: template,
+                singleSelect: true,
+                selectedClass: this.selectedClass,
+                itemSelector: this.itemSelector || '.' + cls + '-item',
+                bindStore : function(store, initial){
+	                if(!initial && this.store){
+	                    this.store.un("beforeload", this.onBeforeLoad, this);
+	                    this.store.un("datachanged", this.refresh, this);
+	                    this.store.un("add", this.onAdd, this);
+	                    this.store.un("remove", this.onRemove, this);
+	                    this.store.un("update", this.refresh, this);
+	                    this.store.un("clear", this.refresh, this);
+	                    if(store !== this.store && this.store.autoDestroy){
+	                        this.store.destroy();
+	                    }
+	                }
+	                if(store){
+	                    store = Ext.StoreMgr.lookup(store);
+	                    store.on("beforeload", this.onBeforeLoad, this);
+	                    store.on("datachanged", this.refresh, this);
+	                    store.on("add", this.onAdd, this);
+	                    store.on("remove", this.onRemove, this);
+	                    store.on("update", this.refresh, this);
+	                    store.on("clear", this.refresh, this);
+	                }
+	                this.store = store;
+	                if(store){
+	                    this.refresh();
+	                }
+	            }
+            });
+
+            this.view.on('click', this.onViewClick, this);
+
+            this.bindStore(this.store, true);
+
+            if(this.resizable){
+                this.resizer = new Ext.Resizable(this.list,  {
+                   pinned:true, handles:'se'
+                });
+                this.resizer.on('resize', function(r, w, h){
+                    this.maxHeight = h-this.handleHeight-this.list.getFrameWidth('tb')-this.assetHeight;
+                    this.listWidth = w;
+                    this.innerList.setWidth(w - this.list.getFrameWidth('lr'));
+                    this.restrictHeight();
+                }, this);
+                this[this.pageSize?'footer':'innerList'].setStyle('margin-bottom', this.handleHeight+'px');
+            }
+        }
+	},
+	getValue : function(){
+		if(this.hiddenField){
+			return this.hiddenField.value;
+		}
+        if(this.valueField){
+            return typeof this.value != 'undefined' ? this.value : '';
+        }else{
+            return Ext.form.ComboBox.superclass.getValue.call(this);
+        }
+    },
+	// private
+    onViewClick : function(doFocus){
+    	 var index = this.view.getSelectedIndexes()[0];
+        if(index >= this.store.getCount()){//如果index > store的记录，那么必然是多选
+        	index = index - this.store.getCount();
+        }
+        var r = this.store.getAt(index);
+        if(r){
+            this.onSelect(r, index);
+        }
+        if(doFocus !== false){
+            this.el.focus();
+        }
+    },
+    doQuery : function(q, forceAll){
+        if(q === undefined || q === null){
+            q = '';
+        }
+        var qe = {
+            query: q,
+            forceAll: forceAll,
+            combo: this,
+            cancel:false
+        };
+        if(this.fireEvent('beforequery', qe)===false || qe.cancel){
+            return false;
+        }
+        q = qe.query;
+        forceAll = qe.forceAll;
+        if(forceAll === true || (q.length >= this.minChars)){
+            if(this.lastQuery !== q){
+                this.lastQuery = q;
+                if(this.mode == 'local'){
+                    this.selectedIndex = -1;
+                    if(forceAll){
+                        this.store.clearFilter();
+                    }else{
+                        for(var i = 0 ; i < this.store.getCount() ; i ++){
+                        	var r = this.store.getAt(i);
+                        	if(r.get(this.displayField).indexOf(q) != -1){
+                        		r.set('visible' , true);
+                        	}else{
+                        		r.set('visible' , false);
+                            }
+                        }
+                    }
+                    this.onLoad();
+                }else{
+                    this.store.baseParams[this.queryParam] = q;
+                    this.store.load({
+                        params: this.getParams(q)
+                    });
+                    this.expand();
+                }
+            }else{
+                this.selectedIndex = -1;
+                this.onLoad();
+            }
+        }
+    },
+	// private
+    onSelect : function(record, index){
+        if(this.fireEvent('beforeselect', this, record, index) !== false){
+        	if(this.isMultiSelect){
+	            var r = this.store.getAt(index);
+	            var newValue = r.data[this.valueField];
+	            if(r.get('selected')){
+	            	r.set('selected' , false);
+	            }else{
+	            	r.set('selected' , true);
+	            }
+	            var value = ''; 
+	            var hiddenValue = '';
+	            for(var i = 0 ; i < this.store.data.length ; i++){
+	            	var r = this.store.getAt(i);   
+	            	if(r.get('selected')){
+	            		value += r.data[this.displayField] + this.displaySeparator;
+	            	 	hiddenValue += r.data[this.valueField] + this.valueSeparator;
+	            	}
+	            }
+	            
+	            if(hiddenValue.length > 1){
+	            	hiddenValue = hiddenValue.substring(0 , hiddenValue.length - this.valueSeparator.length);
+	            }
+	            if(value.length>1){
+	            	value = value.substring(0 , value.length - this.displaySeparator.length);
+	            }
+	            this.setValue(value);
+	            if(this.hiddenField){
+	            	this.hiddenField.value = hiddenValue;
+	            }
+            }else{
+            	this.setValue(record.data[this.valueField || this.displayField]);
+                this.collapse();
+            }
+            this.fireEvent('select', this, record, index);
+        }
+    },
+	createSelectItem : function(date) {
+    	var data = [];
+		if(!this.isMultiSelect){
+			data.push(['','请选择...']);
+		}
+		if(this.direction == 'asc'){
+			for ( var i = parseInt(this.beginNum); i < parseInt(this.endNum); i++) {
+				data.push( [i, this.prefix + (0 < i  &&  i < 10 ? '0' + i : i) + this.suffix  , true , false]);
+			}
+		}else{
+			for ( var i = parseInt(this.endNum); i > parseInt(this.beginNum); i--) {
+				data.push( [i, this.prefix + (0 < i  &&  i < 10 ? '0' + i : i) + this.suffix  , true , false]);
+			}
+		}
+		return data;
+	}
+});
+Ext.reg('Epx.NumberField', Epx.NumberField);
+/**
+ * 年份控件
+ */
+Epx.YearField = Ext.extend(Epx.NumberField, {
+	// private
+	range : 50,
+	suffix : '年',
+	prefix : '',
+	readOnly : false,
+	initComponent : function() {
+		var date = new Date();
+		var currentYear = date.format('Y');
+		this.beginNum = parseInt(currentYear) - this.range;
+		this.endNum = parseInt(currentYear) + this.range;
+		Epx.YearField.superclass.initComponent.call(this);
+	}
+});
+Ext.reg('Epx.YearField', Epx.YearField);
+
+Epx.AutoDistributeGrid = Ext.extend(Ext.BoxComponent, {
+	data : [],
+	leftGrid : null,
+	rightGrid : null,
+	leftStore : null,
+	rigthStore : null,
+	initComponent : function() {
+		Epx.AutoDistributeGrid.superclass.initComponent.call(this);
+	},
+	onRender : function(ct, position) {
+		if (!this.el) {
+			this.el = Ext.DomHelper.append(Ext.getBody(), {
+				tag : 'div'
+			}, true);
+		}
+		Epx.AutoDistributeGrid.superclass.onRender.call(this, ct, position);
+		Ext.DomHelper.append(this.el, {
+			tag : 'table',
+			style : {
+				width : '80%'
+			},
+			children : [ {
+				tag : 'tr',
+				children : [ {
+					tag : 'td',
+					style : {
+						width : '40%'
+					},
+					id : 'left_' + this.id
+				}, {
+					tag : 'td',
+					style : {
+						width : '60%'
+					},
+					id : 'right_' + this.id
+				} ]
+			} ]
+		});
+		this.createLeftGrid();
+		this.createRightGrid();
+	},
+	createRightGrid : function() {
+		this.rightGrid = this.el.child('#right_' + this.id).createChild( {
+			tag : 'table',
+			cls : 'portlet-table',
+			children : [ {
+				tag : 'thead',
+				children : [ {
+					tag : 'tr',
+					children : [ {
+						tag : 'th',
+						html : '属性'
+					}, {
+						tag : 'th',
+						html : '排序方向'
+					}, {
+						tag : 'th',
+						html : '取消排序'
+					} ]
+				} ]
+			}, {
+				tag : 'tbody'
+			} ]
+		});
+		this.rightStore = new Ext.data.Store( {
+			reader : new Ext.data.ArrayReader( {
+				id : 0
+			// 提供数组的下标位置存放记录的ID（可选的） // The
+					// subscript within row Array that
+					// provides an ID for the Record
+					// (optional)
+					}, Ext.data.Record.create( [ {
+						name : 'id',
+						mapping : 0
+					}, // 属性mapping用于指定下标 //
+							// "mapping" only needed if
+							// an "id" field is present
+							// which
+							{
+								name : 'title',
+								mapping : 1
+							}, // 如果不指定就按照定义的先后顺序 // precludes
+							// using the ordinal position as
+							// the index.
+							{
+								name : 'needSort',
+								mapping : 2
+							}, {
+								name : 'sortDirection',
+								mapping : 3
+							}, {
+								name : 'field',
+								mapping : 4
+							} ])),
+			data : [],
+			listeners : {
+				'add' : this.onRightAdd.createDelegate(this),
+				'remove' : this.rightRemove.createDelegate(this)
+			}
+		});
+		this.righttbody = this.rightGrid.child('tbody');
+	},
+	onRightAdd : function(store, record, index) {
+		this.appendRightRow(store.getAt(index).id);
+	},
+	onLeftAdd : function(store, record, index) {
+		this.appendLeftRow(store.getAt(index).id);
+	},
+	createLeftGrid : function() {
+		this.leftGrid = this.el.child('#left_' + this.id).createChild( {
+			tag : 'table',
+			cls : 'portlet-table',
+			children : [{
+				tag : 'thead',
+				children : [{
+					tag : 'tr',
+					children : [{
+						tag : 'th',
+						html : '属性'
+					}, {
+						tag : 'th',
+						html : '需要排序'
+					}]
+				}]
+			}, {
+				tag : 'tbody'
+			}]
+		});
+		this.leftStore = new Ext.data.Store( {
+			reader : new Ext.data.ArrayReader( {
+				id : 0
+			// 提供数组的下标位置存放记录的ID（可选的） // The
+					// subscript within row Array that
+					// provides an ID for the Record
+					// (optional)
+					}, Ext.data.Record.create( [ {
+						name : 'id',
+						mapping : 0
+					}, // 属性mapping用于指定下标 //
+							// "mapping" only needed if
+							// an "id" field is present
+							// which
+							{
+								name : 'title',
+								mapping : 1
+							}, // 如果不指定就按照定义的先后顺序 // precludes
+							// using the ordinal position as
+							// the index.
+							{
+								name : 'needSort',
+								mapping : 2
+							}, {
+								name : 'sortDirection',
+								mapping : 3
+							}, {
+								name : 'field',
+								mapping : 4
+							} ])),
+			data : this.data,
+			listeners : {
+				'remove' : this.leftRemove.createDelegate(this),
+				'add' : this.onLeftAdd.createDelegate(this)
+			}
+		});
+		this.lefttbody = this.leftGrid.child('tbody');
+		for ( var i = 0, length = this.leftStore.getCount(); i < length; i++) {
+			this.appendLeftRow(this.leftStore.getAt(i).get('id'));
+		}
+	},
+	leftRemove : function(store, record, index) {
+		this.lefttbody.child('#leftRow_' + record.get('id')).remove();
+	},
+	rightRemove : function(store, record, index) {
+		this.lefttbody.child('#rightRow_' + record.get('id')).remove();
+	},
+	appendLeftRow : function(id) {
+		var record = this.leftStore.getById(id);
+		Ext.DomHelper.append(this.lefttbody, {
+			tag : 'tr',
+			id : 'leftRow_' + id,
+			style : {
+				background : this.leftStore.indexOf(record) % 2 == 0 ? '#fff' : '#EEF4FB'
+			},
+			children : [ {
+				tag : 'td',
+				html : record.get('title')
+			}, {
+				tag : 'td',
+				children : [ {
+					tag : 'div',
+					html : '&nbsp;',
+					style : {
+						cursor : 'pointer'
+					},
+					cls : 'gonext',
+					onclick : "Epx.get('" + this.id + "').leftSortClick('" + id + "')"
+				} ]
+			} ]
+		}, true);
+
+	},
+	appendRightRow : function(id) {
+		var record = this.rightStore.getById(id);
+		var ascobj = {
+			tag : 'option',
+			value : 'asc',
+			html : '升序'
+		};
+		if (record.get('sortDirection') == 'asc') {
+			ascobj.selected = 'true';
+		}
+		;
+		var descobj = {
+			tag : 'option',
+			value : 'desc',
+			html : '降序'
+		};
+		if (record.get('sortDirection') == 'desc') {
+			descobj.selected = 'true';
+		}
+		;
+		Ext.DomHelper.append(this.righttbody, {
+			tag : 'tr',
+			id : 'rightRow_' + id,
+			style : {
+				background : this.rightStore.indexOf(record) % 2 == 0 ? '#fff' : '#EEF4FB'
+			},
+			children : [ {
+				tag : 'td',
+				html : record.get('title')
+			}, {
+				tag : 'td',
+				children : [ {
+					tag : 'select',
+					onchange : "Epx.get('" + this.id + "').changeSortDirection('" + id + "' , this.value)",
+					style : {
+						width : '120px'
+					},
+					children : [ ascobj, descobj ]
+				} ]
+			}, {
+				tag : 'td',
+				children : [ {
+					tag : 'div',
+					html : '&nbsp;',
+					style : {
+						cursor : 'pointer'
+					},
+					cls : 'gopre',
+					onclick : "Epx.get('" + this.id + "').rightSortClick('" + id + "')"
+				} ]
+			} ]
+		}, true);
+
+	},
+	leftSortClick : function(id) {
+		var record = this.leftStore.getById(id);
+		this.rightStore.add(record);
+		this.leftStore.remove(record);
+	},
+	rightSortClick : function(id) {
+		var record = this.rightStore.getById(id);
+		this.leftStore.add(record);
+		this.rightStore.remove(record);
+	},
+	changeSortDirection : function(id, value) {
+		var record = this.rightStore.getById(id);
+		record.set('sortDirection', value);
+	}
+
+});
+Ext.reg('Epx.AutoDistributeGrid', Epx.AutoDistributeGrid);
+/**
+ * 表格全选方法
+ */
+Epx.selectAllEntities = function(tableId) {
+	var list = Ext.query("#" + tableId + " input[@type='checkbox']");
+	
+	var first;
+	
+	var cbclick = function(){
+		first.indeterminate = true;
+	};
+	
+	for ( var i = 0; i < list.length; i++) {
+		if (i==0){
+			first = list[i];
+		}else{
+			list[i].checked = first.checked;
+			
+			if (list[i].addEventListener){
+				list[i].removeEventListener("click", cbclick, false);
+				list[i].addEventListener("click", cbclick, false);
+			}else if(list[i].attachEvent){
+				list[i].detachEvent("onclick", cbclick);
+				list[i].attachEvent("onclick", cbclick);
+			}
+		}
+	}
+};
+/**
+ * 表格删除方法
+ */
+Epx.deleteEntities = function(url, tableId, idParamName, msg) {
+	var params = [ url ];
+	var list = Ext.query("#" + tableId + " input[@type='checkbox']");
+	var num = 0;
+	var form = document.createElement("form");
+	document.body.appendChild(form);
+	for ( var i = 1; i < list.length; i++) {
+		if (list[i].checked) {
+			params.push(idParamName + '=' + list[i].value);
+			num += 1;
+			var input = document.createElement("input");
+			input.type = "hidden";
+			form.appendChild(input);
+			input.name = idParamName;
+			input.value = list[i].value;
+		}
+	}
+	form.action = url;
+	form.method = "post";
+	if (num == 0) {
+		alert('请选中您要删除的记录！');
+		return;
+	}
+	var confirmMsg = '确定要删除这 ' + num + ' 条记录吗？';
+	if (msg) {
+		confirmMsg += msg;
+	}
+	if (confirm(confirmMsg)) {
+		form.submit();
+		//location.href = params.join('&');
+	}
+};
+/**
+ * 表格多选操作方法. same as Epx.deleteEntities 
+ */
+Epx.batchSelect = function(url, tableId, idParamName, msg) {
+	var params = [ url ];
+	var list = Ext.query("#" + tableId + " input[@type='checkbox']");
+	var num = 0;
+	var form = document.createElement("form");
+	document.body.appendChild(form);
+	for ( var i = 1; i < list.length; i++) {
+		if (list[i].checked) {
+			params.push(idParamName + '=' + list[i].value);
+			num += 1;
+			var input = document.createElement("input");
+			input.type = "hidden";
+			form.appendChild(input);
+			input.name = idParamName;
+			input.value = list[i].value;
+		}
+	}
+	form.action = url;
+	form.method = "post";
+	if (num == 0) {
+		alert('请选中您要操作的记录！');
+		return;
+	}
+	var confirmMsg = '确定要操作这 ' + num + ' 条记录吗？';
+	if (msg) {
+		confirmMsg += msg;
+	}
+	if (confirm(confirmMsg)) {
+		form.submit();
+	}
+};
+/**
+ * 获取选中实体的ID
+ */
+Epx.getSelectedEntityIds = function(tableId){
+	var ids = [];
+	var list = Ext.query("#" + tableId + " input[@type='checkbox']");
+	for ( var i = 1; i < list.length; i++) {
+		if (list[i].checked) {
+			ids.push(list[i].value);
+		}
+	}
+	return ids;
+};
+
+/**
+ * 全局进度条窗口显示 参数: [title] : string, 标题 [handleHide] : function, 关闭事件回调函数
+ * 
+ * 返回: object, Ext.BasicDialog对象
+ */
+Epx.showProgressDialog = function(title, handleHide) {
+	if (!handleHide)
+		handleHide = Ext.emptyFn;
+
+	if (title == undefined)
+		title = "请稍等...";
+	Ext.MessageBox.show( {
+		autoCreate : true,
+		shadow : true,
+		draggable : true,
+		resizable : false,
+		syncHeightBeforeShow : true,
+		constraintoviewport : false,
+		fixedcenter : true,
+		collapsible : false,
+		shim : true,
+		modal : true,
+		width : 290,
+		height : 80,
+		buttonAlign : 'center',
+		title : title,
+		msg : '<div class="progress">&nbsp</div>',
+		closable : false,
+		fn : handleHide
+	});
+
+	// Ext.MessageBox.on("hide", handleHide);
+};
+
+/**
+ * 全局进度条窗口关闭
+ */
+Epx.hideProgressDialog = function() {
+	Ext.MessageBox.hide();
+};
+
+/**
+ * 弹出包含一个textarea的对话框
+ */
+Epx.showMultilineDialog = function(title, msg, callback, config) {
+	var fn = function(btn, text) {
+		if (btn == 'ok') {
+			callback(text);
+		}
+	};
+	config = Ext.apply( {
+		title : title,
+		msg : msg,
+		fn : fn,
+		multiline : true,
+		width : 500,
+		height : 400,
+		buttons : Ext.MessageBox.OKCANCEL
+	}, config);
+	Ext.Msg.show(config);
+};
+/**
+ * 
+ */
+Epx.showOrHidePanel = function(id, scope) {
+	if (!id) {
+		return;
+	}
+	Ext.get(id).enableDisplayMode();
+	if (scope.className == 'app-Shrink') {
+		Ext.get(id).hide();
+		scope.className = 'app-expand';
+	} else {
+		Ext.get(id).show();
+		scope.className = 'app-Shrink';
+	}
+},
+/**
+ * 主键校验
+ */
+Epx.validateIdentity = function(url, scope) {
+	var element = Ext.get(scope);
+	if (element.identityPrompt) {
+		Ext.get(element.identityPrompt).remove();
+	}
+	Ext.Ajax.request( {
+		url : url,
+		success : function(response) {
+			var value = response.responseText;
+			var wrap = element.wrap();
+			if (value.trim() == 'true') {
+				element.identityPrompt = Ext.DomHelper.append(wrap, {
+					tag : 'div',
+					style : {
+						margins : '2px 2px 2px 2px'
+					},
+					children : [ {
+						tag : 'div',
+						cls : 'accept',
+						html : '&nbsp;'
+					}, {
+						tag : 'div',
+						style : {
+							float : 'left'
+						},
+						html : '<font color="#8AC877">可以使用</font>'
+					} ]
+				});
+			} else {
+				element.identityPrompt = Ext.DomHelper.append(wrap, {
+					tag : 'div',
+					style : {
+						margins : '2px 2px 2px 2px'
+					},
+					children : [ {
+						tag : 'div',
+						cls : 'unaccept',
+						html : '&nbsp;'
+					}, {
+						tag : 'div',
+						style : {
+							float : 'left'
+						},
+						html : '<font color="#F37963">不可以使用</font>'
+					} ]
+				});
+			}
+		},
+		params : {
+			identity : element.getValue().trim()
+		},
+		failure : function() {
+		}
+	});
+}, Epx.prompt = function() {
+	var msgCt;
+
+	function createBox(t, s) {
+		return [ '<div class="msg">',
+				'<div class="x-box-tl"><div class="x-box-tr"><div class="x-box-tc"></div></div></div>',
+				'<div class="x-box-ml"><div class="x-box-mr"><div class="x-box-mc"><h3>', t, '&nbsp;<a href="#" onclick="Epx.prompt.hideMsg()"><font size="1">(关闭)</font></a></h3>', s,
+				'</div></div></div>',
+				'<div class="x-box-bl"><div class="x-box-br"><div class="x-box-bc"></div></div></div>', '</div>' ]
+				.join('');
+	}
+	return {
+		getMsgCt : function(){
+			return msgCt;
+		},
+		hideMsg : function(){
+			msgCt.remove();
+			msgCt = null;
+		},
+		msg : function(title, format, delay) {
+			if (!msgCt) {
+				msgCt = Ext.DomHelper.insertFirst(document.body, {
+					id : 'msg-div'
+				}, true);
+			}
+			
+			
+			var s = String.format.apply(String, Array.prototype.slice.call(arguments, 1));
+			var m = Ext.DomHelper.append(msgCt, {
+				html : createBox(title, s)
+			}, true);
+			
+			/*
+			msgCt.setLocation(Ext.isIE ? window.screen.availWidth : window.screen.availWidth - msgCt.getWidth() - 20, window.screen.availHeight
+					- msgCt.getHeight() - 200);
+			*/
+			msgCt.setLocation(Ext.getBody().getViewSize().width - msgCt.getWidth()-20, Ext.getBody().getViewSize().height - msgCt.getHeight()-5);
+			
+			if (!delay) {
+				delay = 5;
+			}
+			m.slideIn('b').pause(delay).ghost("b", {
+				remove : true
+			});
+		},
+
+		init : function() {
+			var t = Ext.get('exttheme');
+				if (!t) { // run locally?
+				return;
+			}
+			var theme = Cookies.get('exttheme') || 'aero';
+			if (theme) {
+				t.dom.value = theme;
+				Ext.getBody().addClass('x-' + theme);
+			}
+			t.on('change', function() {
+				Cookies.set('exttheme', t.getValue());
+				setTimeout(function() {
+					window.location.reload();
+				}, 250);
+			});
+	
+			var lb = Ext.get('lib-bar');
+			if (lb) {
+				lb.show();
+			}
+		}
+	};
+}();
+Ext.EventManager.onDocumentReady(Epx.prompt.init, Epx.prompt, true);
+
+Ext.EventManager.onDocumentReady(Epx.initFragment, Epx, true);
+Ext.useShims = true;
+Ext.DomHelper.useDom = true;
+Object.extend(Validation, {
+	validateElement : function(elm, options){
+		options = Object.extend({
+			useTitle : false,
+			onElementValidate : function(result, elm) {}
+		}, options || {});
+		elm = $(elm);
+		var cn = elm.classNames();
+		return cn.all(function(value) {
+			var test = Validation.test(value,elm,options.useTitle);
+			options.onElementValidate(test, elm);
+			return test;
+		});
+	},
+	showErrorMsg : function(name,elm,errorMsg) {
+		var elm = $(elm);
+		if($(elm.id).getAttribute('elId')){
+			elm = $($(elm.id).getAttribute('elId'));
+		};
+		if(typeof Tooltip != 'undefined') {
+			if (!elm.tooltip) {
+				elm.tooltip = new Tooltip(elm, {backgroundColor:"#FC9", borderColor:"#C96", textColor:"#000", textShadowColor:"#FFF"});
+			}
+			elm.tooltip.content = errorMsg;
+		}else {
+			var prop = Validation._getAdviceProp(name);
+			var advice = Validation.getAdvice(name, elm);
+			if(!elm[prop]) {
+				if(!advice) {
+					advice = Validation.newErrorMsgAdvice(name,elm,errorMsg);
+				}
+			}
+			if(advice && !advice.visible()) {
+				if(typeof Effect == 'undefined') {
+					advice.style.display = 'block';
+				} else {
+					new Effect.Appear(advice, {duration : 1 });
+				}			
+			}
+			advice.innerHTML = errorMsg;
+			elm[prop] = true;
+		}
+		elm.removeClassName('validation-passed');
+		elm.addClassName('validation-failed');
+	}
+});
+
+/**
+ * file: 文件选择html对象
+ * fileType: 文件类型html对象
+ * 		文件类型代码：XLS，DBF，ZIP, OTHERS
+ */
+Epx.importOnSubmit = function(file, fileType){
+	var fname = file.value;
+	var ft = "XLS|DBF";
+	if (fileType){
+		ft = fileType.value;
+	}
+	
+	switch(ft){
+	case "XLS":
+		if(!/\.xls$/i.test(fname)){
+			alert('导入的文件必须是xls格式');
+			return false;
+		}
+		break;
+	case "DBF":
+		if(!/\.dbf$/i.test(fname)){
+			alert('导入的文件必须是dbf格式');
+			return false;
+		}
+		break;
+	case "ZIP":
+		if(!/\.zip$/i.test(fname)){
+			alert('导入的文件必须是zip格式');
+			return false;
+		}
+		break;
+	case "XLS|DBF":
+		if(!/\.xls$/i.test(fname) && !/\.dbf$/i.test(fname)){
+			alert('导入的文件必须是xls或dbf格式');
+			return false;
+		}
+		break;
+	case "OTHERS":
+		if(!/\.xls$/i.test(fname) && !/\.dbf$/i.test(fname) && !/\.zip$/i.test(fname)){
+			alert('导入的文件必须是xls、dbf或zip格式');
+			return false;
+		}
+		break;
+	default:
+		
+	}
+	Epx.showProgressDialog('正在处理导入数据，请稍等 ...');
+	return true;
+};
+
+//导出列选择
+/**
+ * formId: 查询表单的id
+ * expUrl: 导出的url
+ * target：表单提交的target
+ * select：true表示进行列选择，默认为false
+ */
+Epx.exportXls = function(formId, expUrl, target, select, width, height){
+	var formEl = Ext.getDom(formId);
+	var actionParam = Ext.urlDecode(expUrl).action;
+	var oldUrl = formEl.action;
+	var oldTarget = formEl.target;
+	
+	var exportSubmit = function(){
+		Epx.showProgressDialog("正在处理导出数据，请稍等...");
+		
+		formEl.action = expUrl;
+		formEl.target = target;
+		formEl.submit();
+		formEl.action = oldUrl;
+		formEl.target = oldTarget;
+	};
+	
+	if (!select){
+		exportSubmit();
+		return;
+	}
+	
+	
+	var columnsEl = Ext.get(formId).child("input[@name='export_columns']", true);
+	if (!columnsEl){
+		columnsEl = Ext.DomHelper.append(formId, "<input type='hidden' name='export_columns'>");
+	}
+	
+	var selectExportColumnsWin;
+	
+	var showWin = function(){
+		var titles = Ext.decode(selectableColumnsEl.innerHTML);
+			
+		var columnCbs = [];
+		for (var i = 0; i < titles.length; i++){
+			var cb = new Ext.form.Checkbox({
+				id: formId+titles[i].title,
+				boxLabel: titles[i].title,
+				checked: titles[i].selected,
+				inputValue: titles[i].title,
+				listeners:{
+					render: function(){
+						this.wrap.child('label').dom.setAttribute('title', this.boxLabel);
+					}
+				}
+			});
+			columnCbs.push(cb);
+		}
+		
+		var allSelectButton = new Ext.Button({
+	        text: '全选/全不选',
+	        handler: function(){
+			    var cbs = cbgroup.getEl().query("input[@type='checkbox']");
+			    
+			    var first;
+				for (var i = 0;i < cbs.length;i++){
+					if (i==0)first = cbs[i].checked;
+					
+					cbs[i].checked = !first;
+				}
+            }
+	    });
+		
+		var okButton = new Ext.Button({
+            text:'确定',
+            handler: function(){
+    			var columns = [];
+    			
+    			var cbs = cbgroup.getEl().query("input[@type='checkbox']");
+				for (var i = 0;i < cbs.length;i++){
+					if (cbs[i].checked)
+						columns.push(cbs[i].value);
+				}
+    			
+    			
+    			if (columns.length == 0){
+    				alert('请至少选择一列');
+    				return;
+    			}
+    			columnsEl.value = columns.join(",");
+        		exportSubmit();
+        		selectExportColumnsWin.close();
+        	}
+        });
+        
+        var saveState = function(){
+        	var cs = [];
+        	var cbs = cbgroup.getEl().query("input[@type='checkbox']");
+			for (var i = 0;i < cbs.length;i++){
+				cs.push({title: cbs[i].value, selected : cbs[i].checked});
+			}
+        	Ext.DomHelper.overwrite(selectableColumnsEl,Ext.encode(cs));
+        };
+		
+		var cbgroup = new Ext.form.CheckboxGroup({
+			xtype: 'checkboxgroup',
+            columns: 4,
+            allowBlank: true,
+            vertical: true,
+            //height: Ext.getBody().getViewSize().height * 0.8,
+	        //autoHeight: columnCbs.length <= 88,
+            width: '100%',
+	        autoScroll: false,
+            items: columnCbs,
+            listeners:{
+            	render:function(v){
+            		v.dragZone = new Ext.dd.DragZone(v.getEl(), {
+				        getDragData: function(e) {
+				            var sourceEl = e.getTarget('div.x-form-item', 10);
+				            if (sourceEl) {
+				                d = sourceEl.cloneNode(true);
+				                d.id = Ext.id();
+				                return v.dragData = {
+				                    sourceEl: sourceEl,
+				                    repairXY: Ext.fly(sourceEl).getXY(),
+				                    ddel: d
+				                };
+				            }
+				        },
+				        getRepairXY: function() {
+				            return this.dragData.repairXY;
+				        }
+				    });
+				    
+				    v.dropZone = new Ext.dd.DropZone(v.getEl(), {
+				    	getTargetFromEvent: function(e) {
+				            return e.getTarget('.x-form-item');
+				        },
+				        
+				        onNodeEnter : function(target, dd, e, data){ 
+				            Ext.fly(target).setStyle('background-color', '#C0C0C0');
+				        },
+				        
+				        onNodeOut : function(target, dd, e, data){ 
+				            Ext.fly(target).setStyle('background-color', '');
+				        },
+				        
+				        onNodeOver : function(target, dd, e, data){ 
+				            return data.sourceEl == target ? Ext.dd.DropZone.prototype.dropNotAllowed : Ext.dd.DropZone.prototype.dropAllowed;
+				        },
+				        
+				        onNodeDrop : function(target, dd, e, data){
+				        	if (data.sourceEl == target)return false;
+				        	
+				        	var sourceId = Ext.fly(data.sourceEl).child("input[@type='checkbox']", true).id;
+				        	var targetId = Ext.fly(target).child("input[@type='checkbox']", true).id;
+				        	var sourceIdx = cbgroup.items.indexOfKey(sourceId);
+				        	var targetIdx = cbgroup.items.indexOfKey(targetId);
+				        	
+				        	var sourceCb = cbgroup.items.removeKey(sourceId);
+				        	cbgroup.items.insert(targetIdx, sourceCb);
+				        	
+				        	
+				        	var targetHTML = target.innerHTML;
+				        	var sourceHTML = data.sourceEl.innerHTML;
+				        	var items = cbgroup.getEl().query("div.x-form-item");
+				        	var targetIdx = 0;
+				        	var sourceIdx = 0;
+				        	for (var i =0; i < items.length; i++){
+				        		if (target == items[i]){
+				        			targetIdx = i;
+				        		}else if (data.sourceEl == items[i]){
+				        			sourceIdx = i;
+				        		}
+				        	}
+				        	if (sourceIdx > targetIdx){
+				        		for (var i = sourceIdx;i>targetIdx;i--){
+				        			Ext.DomHelper.overwrite(items[i], items[i-1].innerHTML);
+				        		}
+				        		Ext.DomHelper.overwrite(items[targetIdx], sourceHTML);
+				        	}else{
+				        		for (var i = sourceIdx;i<targetIdx;i++){
+				        			Ext.DomHelper.overwrite(items[i], items[i+1].innerHTML);
+				        		}
+				        		Ext.DomHelper.overwrite(items[targetIdx], sourceHTML);
+				        	}
+				        	
+				            return true;
+				        }
+				    });
+            	}
+            }
+		});
+		
+		selectExportColumnsWin = new Ext.Window({
+            //layout: 'fit',
+            width: width?width:Ext.getBody().getViewSize().width * 0.8,
+	        height: height?height:Ext.getBody().getViewSize().height * 0.6,
+	        //autoHeight: columnCbs.length <= 88,
+	        //minHeight: 350,
+            defaultButton: 0,
+            resizable: true,
+            closeAction:'close',
+            plain: true,
+            modal: true,
+            title: '数据项选择',
+            autoScroll: true,
+            tbar:[new Ext.form.Label({text:'提示：您可以通过拖拽来改变数据项的导出顺序(根据每列纵向排列)'})],
+            items: cbgroup,
+            buttons: [allSelectButton,okButton,{
+                text: '取消',
+                handler: function(){
+                    selectExportColumnsWin.close();
+                }
+            }],
+            listeners:{
+            	beforeclose:saveState,
+            	show: function(){
+		    		//if (!Ext.isIE)
+		    			this.syncSize();
+		    			//this.doLayout();
+		    			if (Ext.isIE){
+		    				Ext.select('.x-window-body', false, this.getEl().id).first().applyStyles('position:relative');
+		    			}
+		    	}
+            }
+		});
+		
+		
+		selectExportColumnsWin.show();
+	};
+	
+	var selectableColumnsEl = Ext.getDom(formId+"selectableColumns"+actionParam); 
+	if (!selectableColumnsEl){
+		selectableColumnsEl = Ext.DomHelper.append(formId, "<div id='"+formId+"selectableColumns"+actionParam+"' style='display:none'></div>");
+		Epx.showProgressDialog("正在加载列数据，请稍等...");
+		formEl.action = expUrl;
+		formEl.target = target;
+		Ext.Ajax.request({
+			form: formId,
+			params: {select:true},
+			success: function(response){
+				formEl.action = oldUrl;
+				formEl.target = oldTarget;
+				Epx.hideProgressDialog();
+				
+				var titles = Ext.decode(response.responseText);
+				Ext.DomHelper.overwrite(selectableColumnsEl, Ext.encode(titles));
+				
+				showWin();
+			},
+			failure: function(response){
+				formEl.action = oldUrl;
+				formEl.target = oldTarget;
+				Epx.hideProgressDialog();
+				alert(response.responseText);
+			}
+		});
+	}else{
+		showWin();
+	}
+	
+};
+Epx.exportData = Epx.exportXls;
+
+/**
+ * 导入模板下载
+ * impUrl：导入url
+ * target：文件下载iframe的id
+ */
+Epx.downloadImportTemplate = function(impUrl, target){
+	var formId = target+"_Form";
+	var form = Ext.getDom(formId);
+	if (form == null){
+		form = Ext.DomHelper.append(Ext.getBody(), "<form id='"+formId+"' method='post'></form>");
+	}
+	Epx.showProgressDialog('正在处理模板数据，请稍等...');
+	form.action = impUrl;
+	form.target = target;
+	//Ext.getDom(target).src = impUrl;
+	form.submit();
+	return false;
+};
+
+/**
+ * 导入错误数据下载
+ * impUrl：导入url
+ * target：文件下载iframe的id
+ */
+Epx.downloadImportErrors = function(impUrl, target){
+	var formId = target+"_Form";
+	var form = Ext.getDom(formId);
+	if (form == null){
+		form = Ext.DomHelper.append(Ext.getBody(), "<form id='"+formId+"' method='post'></form>");
+	}
+	Epx.showProgressDialog('正在处理错误数据，请稍等...');
+	form.action = impUrl;
+	form.target = target;
+	//Ext.getDom(target).src = impUrl;
+	form.submit();
+	return false;
+};
+
+/**
+ * 自定义列选择
+ */
+Epx.selectColumns = function(tableId, formId, width, height){
+	var form = Ext.getDom(formId);
+	
+		
+	var columnsEl = Ext.get(formId).child("input[@name='table_columns']", true);
+	if (!columnsEl){
+		columnsEl = Ext.DomHelper.append(formId, "<input type='hidden' name='table_columns'>");
+	}
+	
+	var commandEl = Ext.get(formId).child("input[@name='command']", true);
+	if (!commandEl){
+		commandEl = Ext.DomHelper.append(formId, "<input type='hidden' name='command' value=''>");
+	}
+	
+	var selectableColumnsEl = Ext.getDom(tableId+"selectableColumns"); 
+	
+	var columns = Ext.decode(selectableColumnsEl.innerHTML);
+	var columnCbs = [];
+	for (var id in columns){
+		var cb = new Ext.form.Checkbox({
+			id: tableId+id,
+			boxLabel: columns[id].title,
+			checked: columns[id].selected,
+			inputValue: id,
+			listeners:{
+				render: function(){
+					this.wrap.child('label').dom.setAttribute('title', this.boxLabel);
+				}
+			}
+		});
+		columnCbs.push(cb);
+	}
+	
+	var okButton = new Ext.Button({
+        text:'确定',
+        handler: function(){
+			var columns = [];
+			
+			var cbs = cbgroup.getEl().query("input[@type='checkbox']");
+			for (var i = 0;i < cbs.length;i++){
+				if (cbs[i].checked)
+					columns.push(cbs[i].value);
+			}
+			if (columns.length == 0){
+				alert('请至少选择一列');
+				return;
+			}
+			columnsEl.value = columns.join(",");
+			commandEl.value = 'saveColumns';
+			
+    		form.submit();
+    		selectTableColumnsWin.close();
+    	}
+    });
+    
+    var saveState = function(){
+    	var cs = {};
+    	var cbs = cbgroup.getEl().query("input[@type='checkbox']");
+		for (var i = 0;i < cbs.length;i++){
+			cs[cbs[i].value] = {title: columns[cbs[i].value].title, selected : cbs[i].checked};
+		}
+    	Ext.DomHelper.overwrite(selectableColumnsEl,Ext.encode(cs));
+    };
+	
+	var cbgroup = new Ext.form.CheckboxGroup({
+		xtype: 'checkboxgroup',
+        columns: 4,
+        allowBlank: true,
+        vertical: true,
+        //height: Ext.getBody().getViewSize().height * 0.8,
+        //autoHeight: columnCbs.length <= 88,
+        width: '100%',
+        autoScroll: false,
+        items: columnCbs,
+        listeners:{
+        	render:function(v){
+        		v.dragZone = new Ext.dd.DragZone(v.getEl(), {
+			        getDragData: function(e) {
+			            var sourceEl = e.getTarget('div.x-form-item', 10);
+			            if (sourceEl) {
+			                d = sourceEl.cloneNode(true);
+			                d.id = Ext.id();
+			                return v.dragData = {
+			                    sourceEl: sourceEl,
+			                    repairXY: Ext.fly(sourceEl).getXY(),
+			                    ddel: d
+			                };
+			            }
+			        },
+			        getRepairXY: function() {
+			            return this.dragData.repairXY;
+			        }
+			    });
+			    
+			    v.dropZone = new Ext.dd.DropZone(v.getEl(), {
+			    	getTargetFromEvent: function(e) {
+			            return e.getTarget('.x-form-item');
+			        },
+			        
+			        onNodeEnter : function(target, dd, e, data){ 
+			            Ext.fly(target).setStyle('background-color', '#C0C0C0');
+			        },
+			        
+			        onNodeOut : function(target, dd, e, data){ 
+			            Ext.fly(target).setStyle('background-color', '');
+			        },
+			        
+			        onNodeOver : function(target, dd, e, data){ 
+			            return data.sourceEl == target ? Ext.dd.DropZone.prototype.dropNotAllowed : Ext.dd.DropZone.prototype.dropAllowed;
+			        },
+			        
+			        onNodeDrop : function(target, dd, e, data){
+			        	if (data.sourceEl == target)return false;
+			        	
+			        	var sourceId = Ext.fly(data.sourceEl).child("input[@type='checkbox']", true).id;
+			        	var targetId = Ext.fly(target).child("input[@type='checkbox']", true).id;
+			        	var sourceIdx = cbgroup.items.indexOfKey(sourceId);
+			        	var targetIdx = cbgroup.items.indexOfKey(targetId);
+			        	
+			        	var sourceCb = cbgroup.items.removeKey(sourceId);
+			        	cbgroup.items.insert(targetIdx, sourceCb);
+			        	
+			        	
+			        	var targetHTML = target.innerHTML;
+			        	var sourceHTML = data.sourceEl.innerHTML;
+			        	var items = cbgroup.getEl().query("div.x-form-item");
+			        	var targetIdx = 0;
+			        	var sourceIdx = 0;
+			        	for (var i =0; i < items.length; i++){
+			        		if (target == items[i]){
+			        			targetIdx = i;
+			        		}else if (data.sourceEl == items[i]){
+			        			sourceIdx = i;
+			        		}
+			        	}
+			        	if (sourceIdx > targetIdx){
+			        		for (var i = sourceIdx;i>targetIdx;i--){
+			        			Ext.DomHelper.overwrite(items[i], items[i-1].innerHTML);
+			        		}
+			        		Ext.DomHelper.overwrite(items[targetIdx], sourceHTML);
+			        	}else{
+			        		for (var i = sourceIdx;i<targetIdx;i++){
+			        			Ext.DomHelper.overwrite(items[i], items[i+1].innerHTML);
+			        		}
+			        		Ext.DomHelper.overwrite(items[targetIdx], sourceHTML);
+			        	}
+			        	
+			        	
+			            return true;
+			        }
+			    });
+        	}
+        }
+	});
+	
+	var selectTableColumnsWin = new Ext.Window({
+        //layout: 'fit',
+        width: width?width:Ext.getBody().getViewSize().width * 0.8,
+        height: height?height:Ext.getBody().getViewSize().height * 0.6,
+        //height: 350,
+        //autoHeight: columnCbs.length <= 88,
+        defaultButton: 0,
+        resizable: true,
+        closeAction:'close',
+        plain: true,
+        modal: true,
+        title: '数据列选择',
+        autoScroll: true,
+        tbar:[new Ext.form.Label({text:'提示：您可以通过拖拽来改变数据列的显示顺序(根据每列纵向排列)'})],
+        items: cbgroup,
+        buttons: [okButton,{
+            text: '取消',
+            handler: function(){
+                selectTableColumnsWin.close();
+            }
+        }],
+        listeners:{
+        	beforeclose:saveState,
+        	show: function(){
+				this.syncSize();
+				//this.doLayout();
+				if (Ext.isIE){
+					Ext.select('.x-window-body', false, this.getEl().id).first().applyStyles('position:relative');
+				}
+			}
+        }
+	});
+		
+	selectTableColumnsWin.show();
+};
+
+/**
+ * 自定义查询
+ */
+Epx.selectQueryItems = function(formId, width, height){
+	var form = Ext.getDom(formId);
+	
+	
+	var columnsEl = Ext.get(formId).child("input[@name='query_items']", true);
+	if (!columnsEl){
+		columnsEl = Ext.DomHelper.append(formId, "<input type='hidden' name='query_items'>");
+	}
+	
+	var commandEl = Ext.get(formId).child("input[@name='command']", true);
+	if (!commandEl){
+		commandEl = Ext.DomHelper.append(formId, "<input type='hidden' name='command' value=''>");
+	}
+	
+	var selectableColumnsEl = Ext.getDom(formId+"selectableItems"); 
+	
+	var columns = Ext.decode(selectableColumnsEl.innerHTML);
+	var columnCbs = [];
+	for (var id in columns){
+		var col = columns[id];
+		var cb = new Ext.form.Checkbox({
+			id: formId+col.id,
+			boxLabel: col.label+(col.ops.length == 0?'':'：'),
+			boxLabel2: col.label,
+			checked: col.selected,
+			inputValue: col.id,
+			obj: col,
+			listeners: {
+				render: function(){
+					this.wrap.child('label').dom.setAttribute('title', this.boxLabel2);
+			
+					if (this.initialConfig.obj.ops.length == 0){
+						return;
+					}
+					
+					var selectId = this.id+'.op.select';
+					var selCfg = {tag: 'select', id: selectId, children: []};
+					var curOp = this.initialConfig.obj.op;
+					for (var i =0;i<this.initialConfig.obj.ops.length;i++){
+						var op = this.initialConfig.obj.ops[i];
+						if (curOp && op.name == curOp){
+							selCfg.children.push({tag: 'option', value: op.name, selected: 'true', html: op.label});
+						}else{
+							selCfg.children.push({tag: 'option', value: op.name, html: op.label});
+						}
+					}
+					
+					var selectEl = this.wrap.createChild(selCfg);
+					
+				}
+			}
+		});
+		columnCbs.push(cb);
+	}
+	
+	var okButton = new Ext.Button({
+        text:'确定',
+        handler: function(){
+			var columns = {};
+			
+			var cbs = cbgroup.getEl().query("input[@type='checkbox']");
+			for (var i = 0;i < cbs.length;i++){
+				var selectEl = Ext.get(cbs[i].id+".op.select");
+				if (cbs[i].checked){
+					if (selectEl){
+						columns[cbs[i].value] = {id: cbs[i].value, op: selectEl.dom.value};
+					}else{
+						columns[cbs[i].value] = {id: cbs[i].value};
+					}
+				}
+			}
+			
+			if (columns == {}){
+				alert('请至少选择一项');
+				return;
+			}
+			
+			for (var i = 0;i < cbs.length;i++){
+				var selectEl = Ext.get(cbs[i].id+".op.select");
+				
+				var formInput = Ext.get(form).child("input[@name='"+cbs[i].value+"']");
+				var hideOpEl = Ext.get(form).child("input[@name='"+cbs[i].value+".op']");
+				if (cbs[i].checked){
+					if (!formInput){
+						formInput = Ext.DomHelper.append(formId, "<input name='"+cbs[i].value+"' type='hidden' value=''>");
+					}
+					if (!hideOpEl){
+						hideOpEl = Ext.DomHelper.append(formId, "<input name='"+cbs[i].value+".op' type='hidden' value='"+(selectEl?selectEl.dom.value:"")+"'>");
+					}else{
+						hideOpEl.dom.value = (selectEl?selectEl.dom.value:'');
+					}
+				}else{
+					if (formInput)
+						formInput.remove();
+					if (hideOpEl)
+						hideOpEl.remove();
+				}
+			}
+			
+			columnsEl.value = Ext.encode(columns);//columns.join(",");
+			commandEl.value = 'saveItems';
+			
+    		form.submit();
+    		selectTableColumnsWin.close();
+    	}
+    });
+    
+    var saveState = function(){
+    	var cs = {};
+    	var cbs = cbgroup.getEl().query("input[@type='checkbox']");
+		for (var i = 0;i < cbs.length;i++){
+			var selectEl = Ext.get(cbs[i].id+".op.select");
+			if (!selectEl){
+				cs[cbs[i].value] = {id: cbs[i].value, label: columns[cbs[i].value].label, selected : cbs[i].checked, ops: columns[cbs[i].value].ops};
+			}else{
+				cs[cbs[i].value] = {id: cbs[i].value, label: columns[cbs[i].value].label, selected : cbs[i].checked, ops: columns[cbs[i].value].ops, op: selectEl.dom.value};
+			}
+		}
+    	Ext.DomHelper.overwrite(selectableColumnsEl,Ext.encode(cs));
+    };
+	
+	var cbgroup = new Ext.form.CheckboxGroup({
+		xtype: 'checkboxgroup',
+        columns: 4,
+        allowBlank: true,
+        vertical: true,
+        //height: Ext.getBody().getViewSize().height * 0.8,
+        //autoHeight: columnCbs.length <= 88,
+        width: '100%',
+        autoScroll: false,
+        items: columnCbs,
+        listeners:{
+        	render:function(v){
+        		v.dragZone = new Ext.dd.DragZone(v.getEl(), {
+			        getDragData: function(e) {
+	        			var sourceEl = e.getTarget('div.x-form-item', 5);
+			            var ddel = e.getTarget('label.x-form-cb-label',1);
+			            if (ddel && sourceEl) {
+			                var d = sourceEl.cloneNode(true);
+			                d.id = Ext.id();
+			                var selDom = Ext.fly(d).child("select", true);
+			                if (selDom){
+			                	selDom.value = Ext.fly(sourceEl).child("select", true).value;
+			                }
+			                return v.dragData = {
+			                    sourceEl: sourceEl,
+			                    repairXY: Ext.fly(sourceEl).getXY(),
+			                    ddel: d
+			                };
+			            }
+			        },
+			        getRepairXY: function() {
+			            return this.dragData.repairXY;
+			        }
+			    });
+			    
+			    v.dropZone = new Ext.dd.DropZone(v.getEl(), {
+			    	getTargetFromEvent: function(e) {
+			            return e.getTarget('.x-form-item');
+			        },
+			        
+			        onNodeEnter : function(target, dd, e, data){ 
+			            Ext.fly(target).setStyle('background-color', '#C0C0C0');
+			        },
+			        
+			        onNodeOut : function(target, dd, e, data){ 
+			            Ext.fly(target).setStyle('background-color', '');
+			        },
+			        
+			        onNodeOver : function(target, dd, e, data){ 
+			            return data.sourceEl == target ? Ext.dd.DropZone.prototype.dropNotAllowed : Ext.dd.DropZone.prototype.dropAllowed;
+			        },
+			        
+			        onNodeDrop : function(target, dd, e, data){
+			        	if (data.sourceEl == target)return false;
+			        	
+			        	var sourceId = Ext.fly(data.sourceEl).child("input[@type='checkbox']", true).id;
+			        	var targetId = Ext.fly(target).child("input[@type='checkbox']", true).id;
+			        	var sourceIdx = cbgroup.items.indexOfKey(sourceId);
+			        	var targetIdx = cbgroup.items.indexOfKey(targetId);
+			        	
+			        	var sourceCb = cbgroup.items.removeKey(sourceId);
+			        	cbgroup.items.insert(targetIdx, sourceCb);
+			        	
+			        	
+			        	var targetHTML = target.innerHTML;
+			        	var selDom = Ext.fly(target).child("select", true);
+			        	var targetValue = selDom ? selDom.value : undefined;
+			        	
+			        	var sourceHTML = data.sourceEl.innerHTML;
+			        	selDom = Ext.fly(data.sourceEl).child("select", true);
+			        	var sourceValue = selDom ? selDom.value : undefined;
+			        	var items = cbgroup.getEl().query("div.x-form-item");
+			        	var targetIdx = 0;
+			        	var sourceIdx = 0;
+			        	for (var i =0; i < items.length; i++){
+			        		if (target == items[i]){
+			        			targetIdx = i;
+			        		}else if (data.sourceEl == items[i]){
+			        			sourceIdx = i;
+			        		}
+			        	}
+			        	if (sourceIdx > targetIdx){
+			        		for (var i = sourceIdx;i>targetIdx;i--){
+			        			selDom = Ext.fly(items[i-1]).child("select", true);
+			        			var v = selDom?selDom.value:undefined;
+			        			Ext.DomHelper.overwrite(items[i], items[i-1].innerHTML);
+			        			if (v)
+			        				Ext.fly(items[i]).child("select", true).value = v;
+			        		}
+			        		Ext.DomHelper.overwrite(items[targetIdx], sourceHTML);
+			        		if (sourceValue)
+			        			Ext.fly(items[targetIdx]).child("select", true).value = sourceValue;
+			        	}else{
+			        		for (var i = sourceIdx;i<targetIdx;i++){
+			        			selDom = Ext.fly(items[i+1]).child("select", true);
+			        			var v = selDom ? selDom.value : undefined;
+			        			Ext.DomHelper.overwrite(items[i], items[i+1].innerHTML);
+			        			if (v)
+			        				Ext.fly(items[i]).child("select", true).value = v;
+			        		}
+			        		Ext.DomHelper.overwrite(items[targetIdx], sourceHTML);
+			        		if (sourceValue)
+			        			Ext.fly(items[targetIdx]).child("select", true).value = sourceValue;
+			        	}
+			        	
+			        	
+			            return true;
+			        }
+			    });
+        	}
+        }
+	});
+	
+	var selectTableColumnsWin = new Ext.Window({
+        //layout: 'fit',
+        width: width?width:Ext.getBody().getViewSize().width * 0.8,
+        height: height?height:Ext.getBody().getViewSize().height * 0.6,
+        //height: 350,
+        //autoHeight: columnCbs.length <= 88,
+        defaultButton: 0,
+        resizable: true,
+        closeAction:'close',
+        plain: true,
+        modal: true,
+        title: '查询条件选择',
+        autoScroll: true,
+        tbar:[new Ext.form.Label({text:'提示：您可以通过拖拽来改变查询条件的显示顺序(根据每列纵向排列)'})],
+        items: cbgroup,
+        buttons: [okButton,{
+            text: '取消',
+            handler: function(){
+                selectTableColumnsWin.close();
+            }
+        }],
+        listeners:{
+        	beforeclose:saveState,
+        	show: function(){
+				this.syncSize();
+				//this.doLayout();
+				if (Ext.isIE){
+					Ext.select('.x-window-body', false, this.getEl().id).first().applyStyles('position:relative');
+				}
+			}
+        }
+	});
+		
+	selectTableColumnsWin.show();
+};
