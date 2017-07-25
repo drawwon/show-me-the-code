@@ -17,7 +17,7 @@ aipSpeech = AipSpeech(APP_ID, API_KEY, SECRET_KEY)
 THRESHOLD = 500
 CHUNK_SIZE = 1024
 FORMAT = pyaudio.paInt16
-RATE = 16000
+RATE = 44100
 
 
 def open_url(web_text):
@@ -30,7 +30,7 @@ def get_file_content(filePath):
 def speech_to_text():
     path = './demo.wav'
     record_to_file(path)
-    url_text = aipSpeech.asr(get_file_content('path'), 'pcm', 16000, {
+    url_text = aipSpeech.asr(get_file_content(path), 'pcm', 16000, {
         'lan': 'zh',})
     print url_text
     # record_to_file(path)
@@ -139,6 +139,7 @@ def record():
 
 def record_to_file(path):
     "Records from the microphone and outputs the resulting data to 'path'"
+    print 'please say samething:'
     sample_width, data = record()
     data = pack('<' + ('h'*len(data)), *data)
 
@@ -148,3 +149,6 @@ def record_to_file(path):
     wf.setframerate(RATE)
     wf.writeframes(data)
     wf.close()
+
+if __name__ == '__main__':
+    speech_to_text()
