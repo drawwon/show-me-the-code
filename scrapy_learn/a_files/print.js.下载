@@ -1,0 +1,24 @@
+function PagePrintSetup() {
+	var hkey_root, hkey_path, hkey_key;
+	hkey_root = "HKEY_CURRENT_USER";
+	hkey_path = "\\Software\\Microsoft\\Internet Explorer\\PageSetup\\";
+
+   
+        var RegWsh = new ActiveXObject("WScript.Shell");
+        hkey_key = "header";
+        RegWsh.RegWrite(hkey_root + hkey_path + hkey_key, "");
+
+        hkey_key = "footer";
+        RegWsh.RegWrite(hkey_root + hkey_path + hkey_key, "");
+
+        hkey_key = "margin_top";
+        RegWsh.RegWrite(hkey_root + hkey_path + hkey_key, "0.75");
+        hkey_key = "margin_left";
+        RegWsh.RegWrite(hkey_root + hkey_path + hkey_key, "0.75");
+       
+     
+    
+}
+//-------
+
+//------

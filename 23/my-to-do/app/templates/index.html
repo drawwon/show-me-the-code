@@ -1,0 +1,52 @@
+{% extends "base.html" %} {% block content %}
+<head>
+    <style type="text/css">
+        td{text-align: center}
+        .content_td{width: 100px}
+        .time_td{width: 300px}
+        .done_td{width: 100px}
+    </style>
+</head>
+<form class="input-form" action="/add" method="post">
+    {{ form.hidden_tag() }}
+    {{ form.content(class="form-control") }}
+    <span class="input-btn">
+        <button class="btn-primary" type="submit">Add</button>
+    </span>
+</form>
+{% for error in form.errors.content %}
+<div class="flash alert"><span>{{ error }}</span></div>
+{% endfor %}
+<div>
+    <h2>Todo List</h2> 
+    {% if todos %}
+    <table class="table" style="margin: 0 auto">
+        <thead>
+            <tr>
+                <td class="content_td">Content</td>
+                <td class="time_td">Time</td>
+                <td class="done_td">Operation</td>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in todos %}
+            <tr>
+                <td class="content_td">{{ t.content }}</td>
+                <td class="time_td">{{ t.time.strftime(' %m-%d %H:%M') }}</td>
+                <td class="done_td">
+                    {% if t.status == 0 %}
+                    <a href="/done/{{ t.id }}" class="btn btn-primary" style="color: blue">Done</a> 
+                    {% else %}
+                    <a href="/undone/{{ t.id }}" class="btn btn-primary" style="color: red">Undone</a> 
+                    {% endif %}
+                    <a href="/delete/{{ t.id }}" class="delete btn">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <h3 style="color: red">NO Todos, please add things</h3>
+    {% endif %}
+</div>
+{% endblock %}

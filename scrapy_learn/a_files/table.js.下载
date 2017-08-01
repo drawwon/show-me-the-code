@@ -1,0 +1,25 @@
+function trColor(){	
+	
+	var tableArray = document.getElementsByTagName("TABLE");
+
+	for (var i = 0; i < tableArray.length; i++)
+	{
+		var tableObj = tableArray.item(i);
+		
+		if (tableObj.className == "table_heavy")
+		{
+			for( var j = 1; j < tableObj.rows.length; j++) 
+			{
+				tableObj.rows[j].className = j % 2 == 1 ? "table_heavy_line1" : "table_heavy_line2";
+			}
+		}
+		else if (tableObj.className == "table_light")
+		{
+			for( var j = 1; j < tableObj.rows.length; j++) 
+			{
+				tableObj.rows[j].className = j % 2 == 1 ? "table_light_line1" : "table_light_line2";
+			}
+		}
+	}	
+}
+window.onload = trColor;

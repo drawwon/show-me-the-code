@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>my words pad</title>
+    <link href="{{ url_for('static',filename='bootstrap.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ url_for('static',filename='index.css') }}" rel="stylesheet" type="text/css" />
+    <style type="text/css">
+    .first_div {
+        background-color: blue;
+        color: white
+    }
+
+    .sec_div {
+        background-color: #6C6CF3
+    }
+
+    .content_label {
+        display: table-cell;
+        vertical-align: center
+    }
+
+    .content_div_show {
+        background-color: #CC7CE7;
+        height: 3em;
+        line-height: 3em
+    }
+
+    .liuyan_div {
+        height: 30px
+    }
+
+    </style>
+</head>
+
+<body>
+    <div class="first_div">
+        <h1>留言簿</h1>
+    </div>
+    <div class="sec_div">
+        <div class="liuyan_div" style="font-weight: bold;">请尽情留言:
+            <br>
+        </div>
+        <form class="name_form" action="/add" method="post">
+            <label for="name" style="font-weight: bold;">姓名：</label>
+            <input type="text" name="name">
+            <br>
+            <br>
+            <div class="content_div">
+                <label for="words" class="content_label" style="font-weight: bold;">内容：</label>
+                <textarea rows="10" cols="50" name="content"></textarea>
+                <br>
+            </div>
+            <button type="submit" style="font-size: 15px">提交</button>
+        </form>
+    </div>
+    <div>
+        <h1>留言历史信息</h1>
+        <br> {% for w in words %}
+        <div>{{ w.name }} &nbsp &nbsp留言于： {{ w.time.strftime('%Y-%m-%d-%H:%M') }}</div>
+        <br>
+        <div class="content_div_show"> {{ w.content }} </div>
+        <br> {% endfor %}
+    </div>
+</body>
+
+</html>
