@@ -1,0 +1,7 @@
+<?xml version="1.0" ?>
+<root>
+	<number>
+		<!--城市信息-->
+		{&quot;1&quot;: [&quot;张三&quot;, 150.0, 120.0, 100.0], &quot;2&quot;: [&quot;李四&quot;, 90.0, 99.0, 95.0], &quot;3&quot;: [&quot;王五&quot;, 60.0, 66.0, 68.0]}
+	</number>
+</root>

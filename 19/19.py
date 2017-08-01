@@ -18,9 +18,9 @@ def creat_and_write_xml(filename,row_data):
     number = xml.createElement('number')
     root.appendChild(number)
     number.appendChild(xml.createComment("城市信息"))
-    row_data = json.dumps(row_data)
+    row_data = json.dumps(row_data,ensure_ascii=False)
 
-    text = xml.createTextNode(str(row_data))
+    text = xml.createTextNode(row_data.encode('utf-8'))
 
     number.appendChild(text)
     f = open(filename,'wb')

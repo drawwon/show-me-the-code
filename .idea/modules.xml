@@ -2,6 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$USER_HOME$/Downloads/Compressed/app/.idea/app.iml" filepath="$USER_HOME$/Downloads/Compressed/app/.idea/app.iml" />
+      <module fileurl="file://D:/flask_test/.idea/flask_test.iml" filepath="D:/flask_test/.idea/flask_test.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/python练习册.iml" filepath="$PROJECT_DIR$/.idea/python练习册.iml" />
       <module fileurl="file://D:/迅雷下载/Python机器学习应用-北京理工大学-礼欣、嵩天/【第一周】机器学习之无监督学习/training/.idea/training.iml" filepath="D:/迅雷下载/Python机器学习应用-北京理工大学-礼欣、嵩天/【第一周】机器学习之无监督学习/training/.idea/training.iml" />
     </modules>

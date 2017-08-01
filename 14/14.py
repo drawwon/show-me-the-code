@@ -9,8 +9,14 @@ import os
 
 
 def read_json(filename):
-    return json.loads(open(filename).read().encode('gbk'))
+    # return json.loads(open(filename).read().encode('gbk'))
+    print type(open(filename).read().decode('gbk'))
+    return json.loads(open(filename).read().decode('gbk'))
 
+
+def zhprint(obj):
+    import re
+    print re.sub(r"\\u([a-f0-9]{4})", lambda mg: unichr(int(mg.group(1), 16)), obj.__repr__())
 
 def write_to_csv(data,filename):
 
@@ -18,7 +24,7 @@ def write_to_csv(data,filename):
     ws = dw.add_sheet("student",cell_overwrite_ok=True)
     row = 0
     col = 0
-    print(data.items())
+    print json.dumps(data.items(),ensure_ascii=False)
     for k,v in sorted(data.items(), key=lambda d:d[0]):
         ws.write(row, col, k)
         for i in v:
@@ -30,5 +36,6 @@ def write_to_csv(data,filename):
         os.remove(filename)
     dw.save(filename)
 
-print('请求索引页出错')
+
 write_to_csv(read_json('a.txt'),'student.xls')
+print 'done'

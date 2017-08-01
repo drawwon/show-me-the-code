@@ -7,6 +7,8 @@ from collections import OrderedDict
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn
+plt.rcParams['font.sans-serif']=['SimHei'] #用来正常显示中文标签
+plt.rcParams['axes.unicode_minus']=False #用来正常显示负号
 wb = xlrd.open_workbook('2017-6.xls')
 ws = wb.sheet_by_index(0)
 
@@ -65,6 +67,7 @@ print num
 print np.arange(len(num))
 plt.bar(np.arange(len(num)),num)
 plt.xticks(range(len(num)))
+plt.xlabel(u'6月通话时间')
 for i, v in enumerate(num):
     plt.text(i-0.35,v+0.2, str(v), color='blue', fontweight='bold')
 plt.show()

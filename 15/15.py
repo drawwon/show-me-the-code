@@ -10,7 +10,7 @@ def excel_write(txtfile, csvfile):
     with open(txtfile) as f:
         data = json.loads(f.read().encode('gbk'))
     cs = xlwt.Workbook()
-    shet = cs.add_sheet('student')
+    shet = cs.add_sheet('student',cell_overwrite_ok=True)
     row = 0
     col = 0
     for i,j in data.items():

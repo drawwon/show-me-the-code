@@ -3,12 +3,12 @@
 # @Time    : 2017/5/25 21:28
 
 import xlwt,json
-def red_tet_to_xlsfile(txtfile,xlsfile):
+def read_txt_to_xlsfile(txtfile,xlsfile):
     with open(txtfile) as f:
         data = json.loads(f.read().encode('utf-8'))
 
     wb = xlwt.Workbook()
-    sheet = wb.add_sheet('num')
+    sheet = wb.add_sheet('num',cell_overwrite_ok=True)
     row = col = 0
     print(data)
     for i in data:
@@ -20,4 +20,4 @@ def red_tet_to_xlsfile(txtfile,xlsfile):
     wb.save(xlsfile)
 
 if __name__ == '__main__':
-    red_tet_to_xlsfile('number.txt','number.xls')
+    read_txt_to_xlsfile('number.txt','number.xls')

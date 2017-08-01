@@ -18,9 +18,8 @@ def creat_and_write_xml(filename,row_data):
     city = xml.createElement('city')
     root.appendChild(city)
     city.appendChild(xml.createComment("城市信息"))
-    row_data = json.dumps(row_data)
-
-    text = xml.createTextNode(str(row_data))
+    row_data = json.dumps(row_data,ensure_ascii=False,indent=1)
+    text = xml.createTextNode(row_data.encode('utf-8'))
 
     city.appendChild(text)
     f = open(filename,'wb')
@@ -54,7 +53,7 @@ if __name__ == '__main__':
     #     row_data[i+1] = res_string[i][1:]
     # print row_data
     for i in range(table.nrows):
-        # print(i)
-        row_data[i+1] = table.row_values(i)[1:]
+        print ''.join(table.row_values(i)[1:])
+        row_data[i+1] = ''.join(table.row_values(i)[1:])
     filename = 'city.xml'
     creat_and_write_xml(filename, row_data)

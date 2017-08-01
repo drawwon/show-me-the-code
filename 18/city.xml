@@ -2,6 +2,10 @@
 <root>
 	<city>
 		<!--城市信息-->
-		{&quot;1&quot;: [&quot;\u5f20\u4e09&quot;, 150.0, 120.0, 100.0], &quot;2&quot;: [&quot;\u674e\u56db&quot;, 90.0, 99.0, 95.0], &quot;3&quot;: [&quot;\u738b\u4e94&quot;, 60.0, 66.0, 68.0]}
+		{
+ &quot;1&quot;: &quot;上海&quot;, 
+ &quot;2&quot;: &quot;成都&quot;, 
+ &quot;3&quot;: &quot;北京&quot;
+}
 	</city>
 </root>

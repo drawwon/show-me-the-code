@@ -8,7 +8,10 @@ from sys import byteorder
 from struct import pack
 import pyaudio,wave
 from aip import AipSpeech
-
+import json
+import re
+import speech_recognition as sr
+from urllib2 import Request
 APP_ID = '9928498'
 API_KEY = 'QqDg2SGwVREghceMyAcs0czT'
 SECRET_KEY = '2QGx38tHMPwwGfGucjsEz0KIGtODv728'
@@ -27,12 +30,31 @@ def get_file_content(filePath):
     with open(filePath, 'rb') as fp:
         return fp.read()
 
+
+
+
 def speech_to_text():
     path = './demo.wav'
     record_to_file(path)
-    url_text = aipSpeech.asr(get_file_content(path), 'pcm', 16000, {
-        'lan': 'zh',})
-    print url_text
+    # url_text = aipSpeech.asr(get_file_content('baidu.wav'), 'wav', 16000, {
+    #     'lan': 'zh',
+    # })
+    r = sr.Recognizer()
+    with sr.WavFile(path) as source:
+        audio = r.record(source)
+    IBM_USERNAME = '9599bd39-76eb-41cd-ad55-32ce716dddd0'
+    IBM_PASSWORD = 'cUqQxW2wXiXM'
+    url_text = r.recognize_ibm(audio,
+                              language="zh-CN",
+                              #show_all="True",
+                              username=IBM_USERNAME,
+                              password=IBM_PASSWORD)
+    print url_text,type(url_text),repr(url_text),len(url_text)
+    url_text = u''.join(url_text.split()).encode('utf-8')
+    if '百度' in url_text:
+        webbrowser.open_new_tab('baidu.com')
+    elif '谷歌' in url_text:
+        webbrowser.open_new_tab('google.com')
     # record_to_file(path)
     # wf = wave.open(path)
     # params = wf.getparams()
@@ -107,7 +129,7 @@ def record():
 
     num_silent = 0
     snd_started = False
-
+    # print p.get_device_info_by_index(0)
     r = array('h')
 
     while 1:
@@ -132,16 +154,16 @@ def record():
     stream.close()
     p.terminate()
 
-    r = normalize(r)
-    r = trim(r)
-    r = add_silence(r, 0.5)
+    # r = normalize(r)
+    # r = trim(r)
+    # r = add_silence(r, 0.5)
     return sample_width, r
 
 def record_to_file(path):
     "Records from the microphone and outputs the resulting data to 'path'"
     print 'please say samething:'
     sample_width, data = record()
-    data = pack('<' + ('h'*len(data)), *data)
+    # data = pack('<' + ('h'*len(data)), *data)
 
     wf = wave.open(path, 'wb')
     wf.setnchannels(1)
