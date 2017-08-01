@@ -1,7 +1,0 @@
-<?xml version="1.0" ?>
-<root>
-	<student>
-		<!--学生信息表"id" : [名字, 数学, 语文, 英文]-->
-		{&quot;1&quot;: [&quot;\u5f20\u4e09&quot;, 150.0, 120.0, 100.0], &quot;2&quot;: [&quot;\u674e\u56db&quot;, 90.0, 99.0, 95.0], &quot;3&quot;: [&quot;\u738b\u4e94&quot;, 60.0, 66.0, 68.0]}
-	</student>
-</root>
