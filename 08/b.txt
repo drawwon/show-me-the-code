@@ -1,0 +1,143 @@
+<html><body><div><article class="markdown-body entry-content" itemprop="text"><h2><a id="user-content-python-练习册每天一个小程序" class="anchor" href="#python-练习册每天一个小程序" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" version="1.1" viewbox="0 0 16 16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"/></svg></a>Python 练习册，每天一个小程序</h2>
+<h4><a id="user-content-说明" class="anchor" href="#说明" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" version="1.1" viewbox="0 0 16 16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"/></svg></a>说明：</h4>
+
+<blockquote>
+<p>Talk is cheap. Show me the code.--Linus Torvalds</p>
+</blockquote>
+<hr/>
+<p>**第 0000 题：**将你的 QQ 头像（或者微博头像）右上角加上红色的数字，类似于微信未读信息数量那种提示效果。
+类似于图中效果</p>
+<p><a href="https://camo.githubusercontent.com/d518d3929e4054ce2f9183b23e52908da7e5632d/687474703a2f2f692e696d6775722e636f6d2f736732646b75592e706e673f31" target="_blank"><img src="https://camo.githubusercontent.com/d518d3929e4054ce2f9183b23e52908da7e5632d/687474703a2f2f692e696d6775722e636f6d2f736732646b75592e706e673f31" alt="头像" data-canonical-src="http://i.imgur.com/sg2dkuY.png?1"/></a></p>
+<p><strong>第 0001 题：<strong>做为 Apple Store App 独立开发者，你要搞限时促销，为你的应用</strong>生成激活码</strong>（或者优惠券），使用 Python 如何生成 200 个激活码（或者优惠券）？</p>
+<p><strong>第 0002 题</strong>：将 0001 题生成的 200 个激活码（或者优惠券）保存到 <strong>MySQL</strong> 关系型数据库中。</p>
+<p>**第 0003 题：**将 0001 题生成的 200 个激活码（或者优惠券）保存到 <strong>Redis</strong> 非关系型数据库中。</p>
+<p>**第 0004 题：**任一个英文的纯文本文件，统计其中的单词出现的个数。</p>
+<p>**第 0005 题：**你有一个目录，装了很多照片，把它们的尺寸变成都不大于 iPhone5 分辨率的大小。</p>
+<p>**第 0006 题：**你有一个目录，放了你一个月的日记，都是 txt，为了避免分词的问题，假设内容都是英文，请统计出你认为每篇日记最重要的词。</p>
+<p>**第 0007 题：**有个目录，里面是你自己写过的程序，统计一下你写过多少行代码。包括空行和注释，但是要分别列出来。</p>
+<p><strong>第 0008 题：<strong>一个HTML文件，找出里面的</strong>正文</strong>。</p>
+<p><strong>第 0009 题：<strong>一个HTML文件，找出里面的</strong>链接</strong>。</p>
+<p><strong>第 0010 题：<strong>使用 Python 生成类似于下图中的</strong>字母验证码图片</strong></p>
+<p><a href="https://camo.githubusercontent.com/f80e7aa0d43b3685657b4d329f2809a28c82e12a/687474703a2f2f692e696d6775722e636f6d2f615668626567562e6a7067" target="_blank"><img src="https://camo.githubusercontent.com/f80e7aa0d43b3685657b4d329f2809a28c82e12a/687474703a2f2f692e696d6775722e636f6d2f615668626567562e6a7067" alt="字母验证码" data-canonical-src="http://i.imgur.com/aVhbegV.jpg"/></a></p>
+
+<p><strong>第 0011 题：</strong> 敏感词文本文件 filtered_words.txt，里面的内容为以下内容，当用户输入敏感词语时，则打印出 Freedom，否则打印出 Human Rights。</p>
+<pre><code>北京
+程序员
+公务员
+领导
+牛比
+牛逼
+你娘
+你妈
+love
+sex
+jiangge
+</code></pre>
+<p><strong>第 0012 题：</strong> 敏感词文本文件 filtered_words.txt，里面的内容 和 0011题一样，当用户输入敏感词语，则用 星号 * 替换，例如当用户输入「北京是个好城市」，则变成「**是个好城市」。</p>
+<p><strong>第 0013 题：</strong> 用 Python 写一个爬图片的程序，爬 <a href="http://tieba.baidu.com/p/2166231880">这个链接里的日本妹子图片 :-)</a></p>
+
+<p><strong>第 0014 题：</strong> 纯文本文件 student.txt为学生信息, 里面的内容（包括花括号）如下所示：</p>
+<pre><code>{
+	"1":["张三",150,120,100],
+	"2":["李四",90,99,95],
+	"3":["王五",60,66,68]
+}
+</code></pre>
+<p>请将上述内容写到 student.xls 文件中，如下图所示：</p>
+<p><a href="https://camo.githubusercontent.com/18dea9401449e4ca894d40d55134d9c28083280d/687474703a2f2f692e696d6775722e636f6d2f6e50446c706d652e6a7067" target="_blank"><img src="https://camo.githubusercontent.com/18dea9401449e4ca894d40d55134d9c28083280d/687474703a2f2f692e696d6775722e636f6d2f6e50446c706d652e6a7067" alt="student.xls" data-canonical-src="http://i.imgur.com/nPDlpme.jpg"/></a></p>
+<ul>
+<li><a href="http://www.cnblogs.com/skynet/archive/2013/05/06/3063245.html">阅读资料</a> 腾讯游戏开发 XML 和 Excel 内容相互转换</li>
+</ul>
+<p><strong>第 0015 题：</strong> 纯文本文件 city.txt为城市信息, 里面的内容（包括花括号）如下所示：</p>
+<pre><code>{
+    "1" : "上海",
+    "2" : "北京",
+    "3" : "成都"
+}
+</code></pre>
+<p>请将上述内容写到 city.xls 文件中，如下图所示：</p>
+<p><a href="https://camo.githubusercontent.com/61120377319bfe5520c9d73f51776f923d6bd3b7/687474703a2f2f692e696d6775722e636f6d2f724f4862557a672e706e67" target="_blank"><img src="https://camo.githubusercontent.com/61120377319bfe5520c9d73f51776f923d6bd3b7/687474703a2f2f692e696d6775722e636f6d2f724f4862557a672e706e67" alt="city.xls" data-canonical-src="http://i.imgur.com/rOHbUzg.png"/></a></p>
+<p><strong>第 0016 题：</strong> 纯文本文件 numbers.txt, 里面的内容（包括方括号）如下所示：</p>
+<pre><code>[
+	[1, 82, 65535], 
+	[20, 90, 13],
+	[26, 809, 1024]
+]
+</code></pre>
+<p>请将上述内容写到 numbers.xls 文件中，如下图所示：</p>
+<p><a href="https://camo.githubusercontent.com/60da4d596289212b517547ddcc2408bfc9f39087/687474703a2f2f692e696d6775722e636f6d2f69757a305062762e706e67" target="_blank"><img src="https://camo.githubusercontent.com/60da4d596289212b517547ddcc2408bfc9f39087/687474703a2f2f692e696d6775722e636f6d2f69757a305062762e706e67" alt="numbers.xls" data-canonical-src="http://i.imgur.com/iuz0Pbv.png"/></a></p>
+<p><strong>第 0017 题：</strong> 将 第 0014 题中的 student.xls 文件中的内容写到 student.xml 文件中，如</p>
+<p>下所示：</p>
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;root&gt;
+&lt;students&gt;
+&lt;!-- 
+	学生信息表
+	"id" : [名字, 数学, 语文, 英文]
+--&gt;
+{
+	"1" : ["张三", 150, 120, 100],
+	"2" : ["李四", 90, 99, 95],
+	"3" : ["王五", 60, 66, 68]
+}
+&lt;/students&gt;
+&lt;/root&gt;
+</code></pre>
+<p><strong>第 0018 题：</strong> 将 第 0015 题中的 city.xls 文件中的内容写到 city.xml 文件中，如下所示：</p>
+<pre><code>&lt;?xmlversion="1.0" encoding="UTF-8"?&gt;
+&lt;root&gt;
+&lt;citys&gt;
+&lt;!-- 
+	城市信息
+--&gt;
+{
+	"1" : "上海",
+	"2" : "北京",
+	"3" : "成都"
+}
+&lt;/citys&gt;
+&lt;/root&gt;
+</code></pre>
+<p><strong>第 0019 题：</strong> 将 第 0016 题中的 numbers.xls 文件中的内容写到 numbers.xml 文件中，如下</p>
+<p>所示：</p>
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;root&gt;
+&lt;numbers&gt;
+&lt;!-- 
+	数字信息
+--&gt;
+
+[
+	[1, 82, 65535],
+	[20, 90, 13],
+	[26, 809, 1024]
+]
+
+&lt;/numbers&gt;
+&lt;/root&gt;
+</code></pre>
+<p><strong>第 0020 题：</strong> <a href="http://iservice.10010.com/index_.html">登陆中国联通网上营业厅</a> 后选择「自助服务」 --&gt; 「详单查询」，然后选择你要查询的时间段，点击「查询」按钮，查询结果页面的最下方，点击「导出」，就会生成类似于 2014年10月01日～2014年10月31日通话详单.xls 文件。写代码，对每月通话时间做个统计。</p>
+<p><strong>第 0021 题：</strong> 通常，登陆某个网站或者 APP，需要使用用户名和密码。密码是如何加密后存储起来的呢？请使用 Python 对密码加密。</p>
+
+<p><strong>第 0022 题：</strong> iPhone 6、iPhone 6 Plus 早已上市开卖。请查看你写得 第 0005 题的代码是否可以复用。</p>
+<p><strong>第 0023 题：</strong> 使用 Python 的 Web 框架，做一个 Web 版本 留言簿 应用。</p>
+<p><a href="http://v2ex.com/t/151643#reply53">阅读资料：Python 有哪些 Web 框架</a></p>
+
+<p><strong>第 0024 题：</strong> 使用 Python 的 Web 框架，做一个 Web 版本 TodoList 应用。</p>
+
+<p><strong>第 0025 题：</strong> 使用 Python 实现：对着电脑吼一声,自动打开浏览器中的默认网站。</p>
+<pre><code>例如，对着笔记本电脑吼一声“百度”，浏览器自动打开百度首页。
+
+关键字：Speech to Text
+</code></pre>
+<p>参考思路：<br/>
+1：获取电脑录音--&gt;WAV文件
+python record wav</p>
+<p>2：录音文件--&gt;文本</p>
+<pre><code>STT: Speech to Text
+
+STT API Google API
+</code></pre>
+<p>3:文本--&gt;电脑命令</p>
+</article>
+  </div></body></html>
