@@ -1,3 +1,5 @@
+题目答案及讲解请参见个人博客：[drawon的博客](http://drawon.site/2017/05/09/python%E7%BB%83%E4%B9%A0%E5%86%8C-from-github/)
+
 ## Python 练习册，每天一个小程序 ##
 
 
@@ -11,7 +13,7 @@
 > Talk is cheap. Show me the code.--Linus Torvalds
 
 ----------
- 
+
 **第 0000 题：**将你的 QQ 头像（或者微博头像）右上角加上红色的数字，类似于微信未读信息数量那种提示效果。
 类似于图中效果
 
@@ -53,8 +55,8 @@
     你妈
     love
     sex
-	jiangge
-	
+    jiangge
+
 **第 0012 题：** 敏感词文本文件 filtered_words.txt，里面的内容 和 0011题一样，当用户输入敏感词语，则用 星号 * 替换，例如当用户输入「北京是个好城市」，则变成「**是个好城市」。
 
 **第 0013 题：** 用 Python 写一个爬图片的程序，爬 [这个链接里的日本妹子图片 :-)](http://tieba.baidu.com/p/2166231880)
@@ -183,9 +185,9 @@
 
 
     例如，对着笔记本电脑吼一声“百度”，浏览器自动打开百度首页。
-    
+
     关键字：Speech to Text
-    
+
 参考思路：    
 1：获取电脑录音-->WAV文件
     python record wav
@@ -193,7 +195,7 @@
 2：录音文件-->文本
 
     STT: Speech to Text
-    
+
     STT API Google API
 
 3:文本-->电脑命令
