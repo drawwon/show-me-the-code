@@ -15,4 +15,4 @@ def save_word():
     words.save()
 
 if __name__ == '__main__':
-    manager.run()
+    app.run()
