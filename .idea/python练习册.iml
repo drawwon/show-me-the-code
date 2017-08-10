@@ -8,4 +8,11 @@
     <orderEntry type="module" module-name="flask_test" />
     <orderEntry type="module" module-name="app" />
   </component>
+  <component name="TemplatesService">
+    <option name="TEMPLATE_FOLDERS">
+      <list>
+        <option value="D:/flask_test/templates" />
+      </list>
+    </option>
+  </component>
 </module>

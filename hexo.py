@@ -3,8 +3,9 @@
 # @Time    : 2017/8/10 19:42
 
 import os
-hexo_way = 'E:\项目\blog'
-os.system('cd '+hexo_way)
+hexo_way = ur'E:\项目\blog'
+print 'cd '+hexo_way
+os.system('cd E:\项目\blog')
 os.system('hexo d -g')
 os.system(ur'git add .')
 os.system("git commit -m 'Updated'")
