@@ -4,9 +4,9 @@
 
 import os
 hexo_way = ur'E:\项目\blog'
-print 'cd '+hexo_way
+print 'cd ' + hexo_way
 os.system(ur'cd E:\项目\blog'.encode('gbk'))
-os.system('hexo d -g')
+os.system(ur'hexo d -g')
 os.system(ur'git add .')
 os.system("git commit -m 'Updated'")
 os.system('git push origin source')
